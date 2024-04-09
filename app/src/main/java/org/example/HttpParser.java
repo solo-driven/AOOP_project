@@ -19,7 +19,7 @@
             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
             String line;
             int contentLength = 0;
-
+        
             // Parse request line
             String requestLine = reader.readLine();
             if (requestLine != null) {
@@ -28,25 +28,39 @@
                 path = requestParts[1];
                 version = requestParts[2];
             }
-
+            System.out.println("Parser Method: " + method);
+            System.out.println("Parser Path: " + path);
+            System.out.println("Parser Version: " + version);
+        
             // Parse headers
             while ((line = reader.readLine()) != null && !line.isEmpty()) {
-                if (line.startsWith("Content-Length: ")) {
-                    contentLength = Integer.parseInt(line.substring("Content-Length: ".length()));
-                }
                 String[] headerParts = line.split(": ");
                 headers.put(headerParts[0], headerParts[1]);
+            
+            }
+        
+            // Read request body
+            StringBuilder builder = new StringBuilder();
+            while (reader.ready()) {
+                builder.append((char) reader.read());
+            }
+            body = builder.toString();
+            System.out.println("Parser Body: " + body.replace("\n", "\\n").replace("\r", "\\r"));
+            
+
+
+            contentLength = Integer.parseInt(headers.getOrDefault("Content-Length", "0"));
+            // Verify body length
+            System.out.println("Content-Length: " + contentLength);
+            System.out.println("Body length: " + body.length());
+
+            
+            if (body!=null && body.length() != contentLength) {
+                throw new IOException("Body length doesn't match Content-Length header.");
             }
 
-            // Parse body
-            if (contentLength > 0) {
-                char[] bodyChars = new char[contentLength];
-                reader.read(bodyChars, 0, contentLength);
-                body = new String(bodyChars);
-            } else {
-                body = "";
-            }
         }
+        
         public String getMethod() {
             return method;
         }
