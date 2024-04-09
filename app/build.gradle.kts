@@ -30,6 +30,19 @@ tasks.withType<Jar> {
     }
 }
 
+
+tasks.register<Jar>("fatJar") {
+    manifest {
+        attributes["Main-Class"] = "org.example.App"
+    }
+    from({
+        configurations.runtimeClasspath.get().filter { it.name.endsWith("jar") }.map { zipTree(it) }
+    })
+    archiveBaseName.set("${project.name}-fat")
+    with(tasks.named("jar").get() as CopySpec)
+}
+
+
 testing {
     suites {
         // Configure the built-in test suite
