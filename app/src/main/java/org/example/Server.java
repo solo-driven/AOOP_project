@@ -51,7 +51,13 @@ public abstract class Server {
     protected void handleClient(Socket clientSocket) {
         try {
             HttpParser parser = new HttpParser();
-
+            
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
             parser.parseRequest(clientSocket.getInputStream());
 
             System.out.println(parser);

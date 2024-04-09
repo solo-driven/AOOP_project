@@ -138,13 +138,13 @@ public class AssignmentServer extends Server{
             if (student.email.equals(updatedStudent.email)) {
                 student.preferences = updatedStudent.preferences;
                 return new Response(200, "OK", 
-                        "Student with email " + student.email + " updated");
+                        new Message("Student with email " + student.email + " updated"));
             }
         }
 
         // If student not found in list
         return new Response(404, "Not Found",
-                "Student with email " + updatedStudent.email + " not found");
+                new Message("Student with email " + updatedStudent.email + " not found"));
     }
 
 }

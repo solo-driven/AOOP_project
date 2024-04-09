@@ -1,5 +1,4 @@
 import socket
-import threading
 import json
 
 SERVER_HOST = 'localhost'
@@ -30,12 +29,9 @@ class Response:
                 break
             key, value = line.split(": ")
             headers[key] = value
-
-        print(lines[-1])
-        try:
-            body = json.loads(lines[-1])
-        except json.JSONDecodeError:
-            body = lines[-1]
+        
+        body = json.loads(lines[-1])
+     
 
         return Response(status_code, status_message, headers, body)
 
@@ -43,22 +39,20 @@ def send_http_request(method, path, headers, body):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((SERVER_HOST, SERVER_PORT))
         body_line = f"{body}"
-        headers["Content-Length"] = str(len(body))  # Add Content-Length header
+        headers["Content-Length"] = str(len(body))  
         request_line = f"{method} {path} HTTP/1.1\r\n"
         headers_line = "".join(f"{k}: {v}\r\n" for k, v in headers.items())
         request_message = f"{request_line}{headers_line}\r\n{body_line}"
         s.sendall(request_message.encode('utf-8'))
 
-        print(f"Request sent: {request_message}")
         # Receive the server's response
         response = ''
         while True:
-            print("Receiving data...")
             data = s.recv(1024)
-            print(f"Received data: {data}")
             if not data:
                 break
             response += data.decode('utf-8')
+
         return Response.from_string(response)
 
 def send_preferences(email, preferences, method="POST"):
@@ -66,7 +60,9 @@ def send_preferences(email, preferences, method="POST"):
     headers = {"Content-Type": "application/json"}
     body = json.dumps({"email": email, "preferences": preferences})
     resp = send_http_request(method, path, headers, body)
-    print(resp)
+
+
+    return resp
 
 
 
@@ -75,7 +71,8 @@ def update_preferences(email, preferences):
     headers = {"Content-Type": "application/json"}
     body = json.dumps({"email": email, "preferences": preferences})
     resp = send_http_request("PUT", path, headers, body)
-    print(resp)
+    
+    return resp
 
 def get_destinations() -> list:
     path = "/destinations"
@@ -85,9 +82,7 @@ def get_destinations() -> list:
     destinations = response.body
     if response.status_code != 200:
         raise Exception(f"Failed to get destinations: {response.body}")
-    
-    print(response)
-    print(f"Received destinations: {destinations} , of type {type(destinations)}")
+
     return destinations
 
 
@@ -115,24 +110,37 @@ def listen_for_updates():
 
 from time import sleep
 
-def main():
-    # listener_thread = threading.Thread(target=listen_for_updates, daemon=True)
-    # listener_thread.start()
 
+
+from thread_pool import *
+import time
+def main():
     # Sending preferences with city names
     email = "student@example.com"
     preferences = ["New York", "Paris", "Tokyo", "London", "Sydney"]
     print(f"Sending preferences: {preferences}")
-    send_preferences(email, preferences)
-    sleep(5)
+
+    with ThreadPool() as pool:
+        # when submitted pool alreade starts the execution of the function at sep thread
+        future1 = pool.submit(send_preferences, email, preferences, "POST")
+        new_preferences = ["Sydney", "London", "Tokyo", "Paris", "New York"]
+        future2 = pool.submit(send_preferences, email, new_preferences, "PUT")
+        future3 = pool.submit(get_destinations)
 
 
-    # Updating preferences
-    new_preferences = ["Sydney", "London", "Tokyo", "Paris", "New York"]
-    send_preferences(email, new_preferences, "PUT")
-    sleep(5)
+        resp1 = future1.result()
 
-    get_destinations()
+        resp2 = future2.result()
+        destinations = future3.result()
+
+        print(f"Response 1: {resp1}")
+        print(f"Response 2: {resp2}")
+        print(f"Destinations: {destinations}")
+
+
+
+
+    pool.shutdown()
 
 
 if __name__ == "__main__":
