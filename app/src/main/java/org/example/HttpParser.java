@@ -9,11 +9,11 @@
     import java.util.Map;
 
     public class HttpParser {
-        private String method;
-        private String path;
-        private String version;
-        private Map<String, String> headers = new HashMap<>();
-        private String body;
+        String method;
+        String URI;
+        String version;
+        Map<String, String> headers = new HashMap<>();
+        String body;
 
         public void parseRequest(InputStream inputStream) throws IOException {
             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
@@ -25,11 +25,11 @@
             if (requestLine != null) {
                 String[] requestParts = requestLine.split(" ");
                 method = requestParts[0];
-                path = requestParts[1];
+                URI = requestParts[1];
                 version = requestParts[2];
             }
             System.out.println("Parser Method: " + method);
-            System.out.println("Parser Path: " + path);
+            System.out.println("Parser Path: " + URI);
             System.out.println("Parser Version: " + version);
         
             // Parse headers
@@ -60,32 +60,13 @@
             }
 
         }
-        
-        public String getMethod() {
-            return method;
-        }
 
-        public String getPath() {
-            return path;
-        }
-
-        public String getVersion() {
-            return version;
-        }
-
-        public Map<String, String> getHeaders() {
-            return headers;
-        }
-
-        public String getBody() {
-            return body;
-        }
 
         @Override
         public String toString() {
             return "HttpParser{" +
                     "method='" + method + '\'' +
-                    ", path='" + path + '\'' +
+                    ", path='" + URI + '\'' +
                     ", version='" + version + '\'' +
                     ", headers=" + headers +
                     ", body='" + body + '\'' +

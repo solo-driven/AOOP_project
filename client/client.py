@@ -5,35 +5,7 @@ SERVER_HOST = 'localhost'
 SERVER_PORT = 8080
 LISTENER_PORT = 54321
 
-class Response:
-    def __init__(self, status_code, status_message, headers, body):
-        self.status_code = status_code
-        self.status_message = status_message
-        self.headers = headers
-        self.body = body
-        
-
-    def __str__(self):
-        return f"Response(status_code={self.status_code}, status_message={self.status_message}, headers={self.headers}, body={self.body})"
-    
-    @staticmethod
-    def from_string(response_str):
-        lines = response_str.split("\r\n")
-        _, status_code, status_message = lines[0].split(" ", 2)
-        status_code = int(status_code)
-
-        headers = {}
-        body = ""
-        for line in lines[1:]:
-            if not line:
-                break
-            key, value = line.split(": ")
-            headers[key] = value
-        
-        body = json.loads(lines[-1])
-     
-
-        return Response(status_code, status_message, headers, body)
+from response import Response
 
 def send_http_request(method, path, headers, body):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -86,11 +58,13 @@ def get_destinations() -> list:
     return destinations
 
 
-def get_assignment(email):
-    path = "/assign-student"
+def get_assignment(email, preferences):
+    path = "/assign"
     headers = {"Content-Type": "application/json"}
-    body = json.dumps({"email": email})
-    send_http_request("POST", path, headers, body)
+    body = json.dumps({"email": email, "preferences": preferences})
+    
+
+    return send_http_request("POST", path, headers, body)
 
 def listen_for_updates():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener_socket:
@@ -109,38 +83,95 @@ def listen_for_updates():
 
 
 from time import sleep
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class Student:
+    email: str
+    preferences: tuple
+
+# for testing (in gui use get destinations)
+destinations = [
+    "New York",
+    "Paris",
+    "Tokyo",
+    "London",
+    "Sydney",
+    "Los Angeles",
+    "Chicago",
+    "Toronto",
+    "Berlin",
+    "Madrid"
+]
 
 
+import random
 
+def generate_students(N, destinations) -> list[Student]:
+    students = []
+    for i in range(N):
+        email = f"student{i}@mail.com"
+        preferences = tuple(random.sample(destinations, 4))
+        student = Student(email, preferences)
+        students.append(student)
+    return students
+
+from sseclient import SSEClient
 from thread_pool import *
 import time
 def main():
-    # Sending preferences with city names
-    email = "student@example.com"
-    preferences = ["New York", "Paris", "Tokyo", "London", "Sydney"]
-    print(f"Sending preferences: {preferences}")
+    students = generate_students(10, destinations)
+    me = students[0]
+    def on_message_callback(data):
+        print("SSECLIENT Received data:", data)
 
+    time.sleep(1)
     with ThreadPool() as pool:
-        # when submitted pool alreade starts the execution of the function at sep thread
-        future1 = pool.submit(send_preferences, email, preferences, "POST")
-        new_preferences = ["Sydney", "London", "Tokyo", "Paris", "New York"]
-        future2 = pool.submit(send_preferences, email, new_preferences, "PUT")
-        future3 = pool.submit(get_destinations)
+
+        # Send preferences
+        student_futures = {}
+        for student in students:
+            future = pool.submit(send_preferences, student.email, student.preferences)
+            student_futures[student] = future
+        
+        for student, future in student_futures.items():
+            future.result()
+
+        # assign students
+        for student in students:
+            future = pool.submit(get_assignment, student.email, student.preferences)
+            student_futures[student] = future
+        
+        for student, get_assignment_future in student_futures.items():
+            resp = get_assignment_future.result()
+
+            if resp.status_code != 200:
+                print(f"Failed to assign {student.email}: {resp.body}")
+            else:
+                print(f"{student.email} assigned to {resp.body}")
+                client = SSEClient(SERVER_HOST, SERVER_PORT, "/assignment-stream", on_message_callback)
+                client.connect_to_server(student.email)
 
 
-        resp1 = future1.result()
 
-        resp2 = future2.result()
-        destinations = future3.result()
+            
 
-        print(f"Response 1: {resp1}")
-        print(f"Response 2: {resp2}")
-        print(f"Destinations: {destinations}")
+        
+        
+
+    # student_0 = students[0]
+    # future_assign = pool.submit(get_assignment,  student_0.email, student_0.preferences)
+
+    # res_assign = future_assign.result()
+    # print("Result", res_assign)
+    
 
 
 
 
-    pool.shutdown()
+
+
+
 
 
 if __name__ == "__main__":

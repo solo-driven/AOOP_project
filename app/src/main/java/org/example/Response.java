@@ -6,7 +6,7 @@ import java.util.Map;
 public class Response {
     int statusCode;
     String statusMessage;
-    Map<String, String> headers;
+    Map<String, String> headers = new HashMap<>();
     String body;
 
     Response(int statusCode, String statusMessage, String body) {
@@ -14,24 +14,13 @@ public class Response {
         this.statusMessage = statusMessage;
         this.body = body;
 
-        initHeaders();
     }
 
     Response(int statusCode, String statusMessage, Message msg) {
         this.statusCode = statusCode;
         this.statusMessage = statusMessage;
         this.body = msg.toString();
-
-        initHeaders();
     }
-
-
-    private void initHeaders() {
-        this.headers = new HashMap<>();
-        headers.put("Content-Type", "application/json");
-        headers.put("Content-Length", Integer.toString(this.body.length()));
-    }
-
 
 
     @Override

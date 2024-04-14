@@ -18,7 +18,7 @@ public abstract class Server {
 
     @FunctionalInterface
     interface Handler {
-        Response handle(String requestBody);
+        Response handle(Request requestBody);
     }
 
     public Server(int port) throws IOException {
@@ -50,35 +50,30 @@ public abstract class Server {
 
     protected void handleClient(Socket clientSocket) {
         try {
-            HttpParser parser = new HttpParser();
-            
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-            parser.parseRequest(clientSocket.getInputStream());
+            // HttpParser parser = new HttpParser();
 
-            System.out.println(parser);
+            // parser.parseRequest(clientSocket.getInputStream());
 
-            String method = parser.getMethod();
-            String path = parser.getPath();
-            String body = parser.getBody();
+            // System.out.println(parser);
 
-            System.out.println("client Method: " + method);
-            System.out.println("client Path: " + path);
-            System.out.println("client Body: " + body);
-            System.out.println("client Headers: " + parser.getHeaders());
+            // String method = parser.getMethod();
+            // String path = parser.getPath();
+            // String body = parser.getBody();
 
-            Route route = new Route(method, path);
+            // System.out.println("client Method: " + method);
+            // System.out.println("client Path: " + path);
+            // System.out.println("client Body: " + body);
+            // System.out.println("client Headers: " + parser.getHeaders());
+
+            Request req = new Request(clientSocket);
+            Route route = new Route(req.method, req.path);
 
             Handler handler = handlers.get(route);
 
             Response response;
 
             if (handler != null) {
-                response = handler.handle(body);
+                response = handler.handle(req);
             } else {
                 response = new Response(404, "Not Found",
                         "The requested route does not exist.");
