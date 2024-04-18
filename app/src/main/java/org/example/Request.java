@@ -47,4 +47,15 @@ public class Request {
         }
         return queryParams;
     }
+
+    @Override
+    public String toString() {
+        return "Request{" +
+                "method='" + method + '\'' +
+                ", path='" + path + '\'' +
+                ", headers=" + headers +
+                ", queryParams=" + queryParams +
+                ", body='" + body + '\'' +
+                '}';
+    }
 }

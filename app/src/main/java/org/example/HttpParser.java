@@ -28,9 +28,6 @@
                 URI = requestParts[1];
                 version = requestParts[2];
             }
-            System.out.println("Parser Method: " + method);
-            System.out.println("Parser Path: " + URI);
-            System.out.println("Parser Version: " + version);
         
             // Parse headers
             while ((line = reader.readLine()) != null && !line.isEmpty()) {
@@ -45,15 +42,11 @@
                 builder.append((char) reader.read());
             }
             body = builder.toString();
-            System.out.println("Parser Body: " + body.replace("\n", "\\n").replace("\r", "\\r"));
             
 
 
             contentLength = Integer.parseInt(headers.getOrDefault("Content-Length", "0"));
             // Verify body length
-            System.out.println("Content-Length: " + contentLength);
-            System.out.println("Body length: " + body.length());
-
             
             if (body!=null && body.length() != contentLength) {
                 throw new IOException("Body length doesn't match Content-Length header.");

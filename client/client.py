@@ -18,8 +18,10 @@ def send_http_request(method, path, headers, body):
         s.sendall(request_message.encode('utf-8'))
 
         # Receive the server's response
+        data=''
         response = ''
         while True:
+
             data = s.recv(1024)
             if not data:
                 break
@@ -27,7 +29,7 @@ def send_http_request(method, path, headers, body):
 
         return Response.from_string(response)
 
-def send_preferences(email, preferences, method="POST"):
+def send_preferences(email, preferences, method="POST") -> Response:
     path = "/preferences"
     headers = {"Content-Type": "application/json"}
     body = json.dumps({"email": email, "preferences": preferences})
@@ -119,9 +121,10 @@ def generate_students(N, destinations) -> list[Student]:
 from sseclient import SSEClient
 from thread_pool import *
 import time
+
+
 def main():
-    students = generate_students(10, destinations)
-    me = students[0]
+    students = generate_students(4, destinations)
     def on_message_callback(data):
         print("SSECLIENT Received data:", data)
 
@@ -135,7 +138,15 @@ def main():
             student_futures[student] = future
         
         for student, future in student_futures.items():
-            future.result()
+            print(student.email, future.result())
+        
+        for student in students:
+            client = SSEClient(SERVER_HOST, SERVER_PORT, "/assignment-stream", on_message_callback)
+            client.connect_to_server(student.email)
+            client.initial_response_received.wait()
+            print("waited for stream to connect for", student.email)
+        
+        
 
         # assign students
         for student in students:
@@ -144,13 +155,10 @@ def main():
         
         for student, get_assignment_future in student_futures.items():
             resp = get_assignment_future.result()
+            
+            print(f"Result for {student.email}: {resp}")
 
-            if resp.status_code != 200:
-                print(f"Failed to assign {student.email}: {resp.body}")
-            else:
-                print(f"{student.email} assigned to {resp.body}")
-                client = SSEClient(SERVER_HOST, SERVER_PORT, "/assignment-stream", on_message_callback)
-                client.connect_to_server(student.email)
+        
 
 
 

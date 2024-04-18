@@ -16,6 +16,11 @@ public class Student implements Comparable<Student> {
         return this.email.compareTo(other.email);
     }
 
+    @Override
+    public String toString() {
+        return email;
+    }
+
 
     @Override
     public int hashCode() {

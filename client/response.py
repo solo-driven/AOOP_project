@@ -13,8 +13,8 @@ class Response:
         return f"Response(status_code={self.status_code}, status_message={self.status_message}, headers={self.headers}, body={self.body})"
     
     @staticmethod
-    def from_string(response_str):
-        lines = response_str.split("\r\n")
+    def from_string(response_str, sep="\r\n"):
+        lines = response_str.split(sep)
         _, status_code, status_message = lines[0].split(" ", 2)
         status_code = int(status_code)
 
@@ -25,8 +25,10 @@ class Response:
                 break
             key, value = line.split(": ")
             headers[key] = value
-        
-        body = json.loads(lines[-1])
+
+        body = ""
+        if lines[-1]:
+            body = json.loads(lines[-1])
      
 
         return Response(status_code, status_message, headers, body)

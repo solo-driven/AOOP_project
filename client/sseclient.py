@@ -3,12 +3,16 @@ import threading
 from typing import Callable
 
 from response import Response
+from time import sleep
+
+
 class SSEClient:
     def __init__(self, ip: str, port: int, path: str, on_message: Callable[[dict], None]):
         self.ip = ip
         self.port = port
         self.path = path
         self.on_message = on_message
+        self.initial_response_received = threading.Event()
 
     def connect_to_server(self, client_id: str):
         threading.Thread(target=self._connect_to_server, args=(client_id,)).start()
@@ -21,29 +25,33 @@ class SSEClient:
             request_message = f"{request_line}{headers_line}\r\n"
             s.sendall(request_message.encode('utf-8'))
 
-            # Read the server's initial response (the headers)
+            sep = "\n"
             response = ''
+            reading_headers = True
             while True:
                 data = s.recv(1024)
+                #print("data", data, len(data))
                 if not data:
                     break
-                response += data.decode('utf-8')
+                data = data.decode('utf-8')
+                response += data
 
+                if reading_headers:
+                    # Check if we've received all the headers
+                    if '\r\n\r\n' in response:
+                        resp = Response.from_string(response)
+                        if resp.status_code != 200:
+                            raise Exception(f"Failed to connect to server: {resp}")
+                        reading_headers = False
+                        self.initial_response_received.set()
+                        continue
 
-            resp = Response.from_string(response)
-            print("SSEclient response: ", resp)
-
-            if resp.status_code != 200:
-                raise Exception(f"Failed to connect to server: {resp}")
-
-            while True:
-                data = s.recv(1024).decode("utf-8")
-                print("received data in while: ", data)
-                if data:
-                    events = data.split("\n\n")
+                if not reading_headers and data:
+                    events = data.split(sep + sep)
                     for event in events:
                         if event:
-                            lines = event.split("\n")
+                            lines = event.split(sep)
+                            #print("Lines are", lines)
                             event_dict = {}
                             for line in lines:
                                 if line.startswith("event:"):
@@ -52,19 +60,4 @@ class SSEClient:
                                     event_dict["data"] = line.split(": ", 1)[1]
                                 elif line.startswith("id:"):
                                     event_dict["id"] = line.split(": ", 1)[1]
-
                             self.on_message(event_dict)
-
-def main():
-    ip = "localhost"
-    port = 8080
-    path = "/assignment-stream"
-
-    def on_message_callback(data):
-        print("Received data:", data)
-
-    client = SSEClient(ip, port, path, on_message_callback)
-    threading.Thread(target=client.connect_to_server).start()
-
-if __name__ == "__main__":
-    main()

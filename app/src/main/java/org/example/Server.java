@@ -50,22 +50,10 @@ public abstract class Server {
 
     protected void handleClient(Socket clientSocket) {
         try {
-            // HttpParser parser = new HttpParser();
-
-            // parser.parseRequest(clientSocket.getInputStream());
-
-            // System.out.println(parser);
-
-            // String method = parser.getMethod();
-            // String path = parser.getPath();
-            // String body = parser.getBody();
-
-            // System.out.println("client Method: " + method);
-            // System.out.println("client Path: " + path);
-            // System.out.println("client Body: " + body);
-            // System.out.println("client Headers: " + parser.getHeaders());
 
             Request req = new Request(clientSocket);
+            System.out.println(req);
+
             Route route = new Route(req.method, req.path);
 
             Handler handler = handlers.get(route);
@@ -81,7 +69,13 @@ public abstract class Server {
 
             OutputStream outputStream = clientSocket.getOutputStream();
             outputStream.write(response.toString().getBytes());
-            outputStream.close();
+
+            if ("keep-alive".equals(req.headers.get("Connection"))) {
+                outputStream.flush();
+            } else {
+                outputStream.close();
+            }
+
         } catch (IOException e) {
             e.printStackTrace();
         }
