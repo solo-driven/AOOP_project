@@ -181,22 +181,18 @@ public class AssignmentServer extends Server {
         } catch (JsonSyntaxException e) {
             return new RESTResponse(404, "Bad Request", new Message("Invalid JSON format in request body"));
         }
+        
         // Validate student
         Response validationResponse = validateStudent(student);
         if (validationResponse != null) {
             return validationResponse;
         }
 
-        synchronized (students) {
-            // Student already exists
-            for (Student s : students) {
-                if (s.email.equals(student.email)) {
-                    return new RESTResponse(400, "Bad Request",
-                            new Message("Student with email " + student.email + " already exists"));
-                }
-            }
-
+        if (students.contains(student)) {
+            return new RESTResponse(400, "Bad Request",
+                new Message("Student with email " + student.email + " already exists"));
         }
+
         // Add student to list
         students.add(student);
         // Handle POST /preferences
@@ -222,7 +218,7 @@ public class AssignmentServer extends Server {
         }
 
         // preferences must be between 0 and 5
-        if (student.preferences.size() > 5) {
+        if (student.preferences.size() > 5 || student.preferences.size() < 1){
             return new RESTResponse(400, "Bad Request", new Message("Too many preferences, maximum is 5"));
         }
 
