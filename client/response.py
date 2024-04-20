@@ -28,6 +28,10 @@ class Response:
 
         body = ""
         if lines[-1]:
+            # print("-"*50)
+            # print(lines)
+            # print("-"*50)
+
             body = json.loads(lines[-1])
      
 
