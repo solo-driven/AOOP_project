@@ -5,7 +5,7 @@ SERVER_HOST = 'localhost'
 SERVER_PORT = 8080
 LISTENER_PORT = 54321
 
-from response import Response
+from client.response import Response
 
 def send_http_request(method, path, headers, body):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -118,8 +118,8 @@ def generate_students(N, destinations) -> list[Student]:
         students.append(student)
     return students
 
-from sseclient import SSEClient
-from thread_pool import *
+from client.sseclient import SSEClient
+from client.thread_pool import *
 import time
 
 
