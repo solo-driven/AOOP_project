@@ -14,7 +14,7 @@ class SSEClient:
         self.on_message = on_message
         self.initial_response_received = threading.Event()
 
-    def connect_to_server(self, client_id: str):
+    def connect_to_server(self, client_id: str):  
         threading.Thread(target=self._connect_to_server, args=(client_id,)).start()
 
     def _connect_to_server(self, client_id: str):

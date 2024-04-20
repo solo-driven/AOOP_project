@@ -1,50 +1,52 @@
 # Assignment Server
 
-The **Assignment Server** project is a server application designed to manage student assignments. It offers various endpoints to handle tasks such as retrieving a list of destinations, fetching assignments, posting preferences, updating preferences, and obtaining a list of students.
+The **Assignment Server** is a robust server application designed to manage student assignments. It provides a variety of endpoints to handle tasks such as retrieving a list of destinations, fetching assignments, managing student preferences, and subscribing to real-time updates.
 
-## How it Works
+## Architecture
 
-The server utilizes a `ServerSocket` to listen for incoming connections. Upon connection, it delegates the task to a thread from a thread pool for handling. It employs an `HttpParser` to parse incoming HTTP requests and a map of routes to handlers to determine how to process the requests.
+The server is built on a multi-threaded architecture, utilizing a `ServerSocket` to listen for incoming connections. Each connection is handled by a separate thread from a thread pool, ensuring efficient resource utilization.
 
-The assignment of students to destinations is carried out using a `GeneticAlgorithm`, considering their preferences. 
+The server uses an `HttpParser` to parse incoming HTTP requests and a map of routes to handlers to process the requests. The assignment of students to destinations is carried out using a `GeneticAlgorithm`, taking into account their preferences.
 
 The server also supports Server-Sent Events (SSE) for real-time updates. Clients can subscribe to the `/assignment-stream` endpoint to receive updates whenever there is a change in the assignments.
 
-## How to Run
 
-This project relies on Gradle for both build and dependency management. To run the server, you can utilize the `gradle run` command.
 
-### Steps to Run the Server:
+## Running the Server
 
-1. Open a terminal in the project root directory.
-2. Execute the following command to start the server:
+### Using the Pre-Built JAR 
+#### Prerequisites
 
-```bash
-gradle run
-```
-
-The server will commence and listen for incoming connections on the specified port.
-
-In case Gradle isn't installed, you can use the Gradle Wrapper (`gradlew` or `gradlew.bat` for Windows), typically included in the project root. The Gradle Wrapper automatically downloads and installs the appropriate Gradle version and executes it.
-
-### Steps to Run Using the Gradle Wrapper:
+- Java 21 or higher
 
 1. Open a terminal in the project root directory.
-2. If you're on a Unix-based system (like Linux or Mac), make the Gradle Wrapper script executable using the following command:
+2. Run the following command to start the server:
+
+    ```bash
+    java -jar app.jar
+    ```
+
+### Using Gradle Wrapper
+
+The Gradle Wrapper is included in the project and can be used to build and run the server without needing to install Gradle.
+
+1. Open a terminal in the project root directory.
+2. Run the following command to start the server:
+
+    ```bash
+    ./gradlew run
+    ```
+
+    If you're on Windows, use `gradlew.bat run` instead of `./gradlew run`.
+
+### Using Docker
+
+You can also run the server using Docker. The Docker image for the server is available on Docker Hub. You can pull the image and run it with the following commands:
 
 ```bash
-chmod +x gradlew
+docker pull solodriven/final_project_server
+docker run -p 8080:8080 solodriven/final_project_server
 ```
-
-3. Execute the following command to start the server:
-```bash
-./gradlew run
-```
-
-If you're on Windows, use `gradlew.bat` instead of `./gradlew`.
-
-The server will initiate and listen for incoming connections on the specified port.
-
 ## Endpoints
 
 - **`GET /destinations`**: This endpoint retrieves a list of all available destinations. It doesn't require any input and returns a JSON array of cities.
@@ -65,14 +67,6 @@ The server will initiate and listen for incoming connections on the specified po
 
 Server-Sent Events (SSE) is a standard that allows a web server to push updates to the client. Unlike WebSockets, SSE is a one-way communication channel from the server to the client. In this application, SSE is used to push assignment updates to the clients in real-time.
 
-## Running with Docker
-
-You can also run the server using Docker. The Docker image for the server is available on Docker Hub. You can pull the image and run it with the following commands:
-
-```bash
-docker pull solodriven/final_project_server
-docker run -p 8080:8080 solodriven/final_project_server
-```
 
 ## Dependencies
 
