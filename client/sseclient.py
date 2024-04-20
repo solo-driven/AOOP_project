@@ -21,11 +21,16 @@ class SSEClient:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((self.ip, self.port))
             request_line = f"GET {self.path}?clientId={client_id} HTTP/1.1\r\n"
-            headers_line = f"Host: {self.ip}:{self.port}\r\nAccept: text/event-stream\r\nConnection: keep-alive\r\n"
+            headers = {
+                "Host": f"{self.ip}:{self.port}",
+                "Accept": "text/event-stream",
+                "Connection": "keep-alive"
+            }
+            headers_line = "".join(f"{k}: {v}\r\n" for k, v in headers.items())
             request_message = f"{request_line}{headers_line}\r\n"
             s.sendall(request_message.encode('utf-8'))
 
-            sep = "\n"
+            event_sep = "\n"
             response = ''
             reading_headers = True
             while True:
@@ -47,10 +52,10 @@ class SSEClient:
                         continue
 
                 if not reading_headers and data:
-                    events = data.split(sep + sep)
+                    events = data.split(event_sep + event_sep)
                     for event in events:
                         if event:
-                            lines = event.split(sep)
+                            lines = event.split(event_sep)
                             #print("Lines are", lines)
                             event_dict = {}
                             for line in lines:

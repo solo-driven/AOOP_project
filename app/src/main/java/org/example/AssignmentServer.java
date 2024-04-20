@@ -8,15 +8,11 @@ import java.util.stream.Collectors;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 
-// problem in finding the student's out
 
 public class AssignmentServer extends Server {
     private String destinations_path = "/destinations.csv";
     private Map<String, Integer> destinations;
     private GeneticAlgorithm geneticAlgorithm;
-    // private List<Student> students = new ArrayList<>();
-    // private Map<Student, String> assignments = new HashMap<>();
-    // private Map<Student, PrintWriter> studentConnections = new HashMap<>();
     private Set<Student> students = Collections.synchronizedSet(new LinkedHashSet<>());
     private Map<Student, String> assignments = new ConcurrentHashMap<>();
     private Map<Student, PrintWriter> studentConnections = new ConcurrentHashMap<>();

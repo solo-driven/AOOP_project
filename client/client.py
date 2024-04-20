@@ -3,18 +3,16 @@ import json
 
 SERVER_HOST = 'localhost'
 SERVER_PORT = 8080
-LISTENER_PORT = 54321
 
 from client.response import Response
 
-def send_http_request(method, path, headers, body):
+def send_http_request(method, path, headers={}, body="") -> Response:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((SERVER_HOST, SERVER_PORT))
-        body_line = f"{body}"
         headers["Content-Length"] = str(len(body))  
         request_line = f"{method} {path} HTTP/1.1\r\n"
         headers_line = "".join(f"{k}: {v}\r\n" for k, v in headers.items())
-        request_message = f"{request_line}{headers_line}\r\n{body_line}"
+        request_message = f"{request_line}{headers_line}\r\n{body}"
         s.sendall(request_message.encode('utf-8'))
 
         # Receive the server's response
@@ -35,32 +33,19 @@ def send_preferences(email, preferences, method="POST") -> Response:
     body = json.dumps({"email": email, "preferences": preferences})
     resp = send_http_request(method, path, headers, body)
 
-
     return resp
 
 
 
-def update_preferences(email, preferences):
-    path = "/preferences"
-    headers = {"Content-Type": "application/json"}
-    body = json.dumps({"email": email, "preferences": preferences})
-    resp = send_http_request("PUT", path, headers, body)
-    
-    return resp
+def update_preferences(email, preferences) -> Response:
+    return send_preferences(email, preferences, "PUT")
 
-def get_destinations() -> list:
+def get_destinations() -> Response:
     path = "/destinations"
-    headers = {}
-    body = ""
-    response = send_http_request("GET", path, headers, body)
-    destinations = response.body
-    if response.status_code != 200:
-        raise Exception(f"Failed to get destinations: {response.body}")
-
-    return destinations
+    return send_http_request("GET", path)
 
 
-def get_assignment(email, preferences):
+def get_assignment(email, preferences) -> Response:
     path = "/assign"
     headers = {"Content-Type": "application/json"}
     body = json.dumps({"email": email, "preferences": preferences})
@@ -68,67 +53,43 @@ def get_assignment(email, preferences):
 
     return send_http_request("POST", path, headers, body)
 
-def listen_for_updates():
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener_socket:
-        listener_socket.bind((SERVER_HOST, LISTENER_PORT))
-        listener_socket.listen()
-        print(f"Listening for updates on {SERVER_HOST}:{LISTENER_PORT}...")
-        while True:
-            conn, addr = listener_socket.accept()
-            with conn:
-                print(f"Connected by {addr}")
-                while True:
-                    data = conn.recv(1024)
-                    if not data:
-                        break
-                    print(f"Update received: {data.decode('utf-8')}")
 
-
-from time import sleep
-from dataclasses import dataclass
-
-@dataclass(frozen=True)
-class Student:
-    email: str
-    preferences: tuple
-
-# for testing (in gui use get destinations)
-destinations = [
-    "New York",
-    "Paris",
-    "Tokyo",
-    "London",
-    "Sydney",
-    "Los Angeles",
-    "Chicago",
-    "Toronto",
-    "Berlin",
-    "Madrid"
-]
-
-
-import random
-
-def generate_students(N, destinations) -> list[Student]:
-    students = []
-    for i in range(N):
-        email = f"student{i}@mail.com"
-        preferences = tuple(random.sample(destinations, 4))
-        student = Student(email, preferences)
-        students.append(student)
-    return students
-
-from client.sseclient import SSEClient
-from client.thread_pool import *
-import time
 
 
 def main():
+    
+    # for testing (in gui use get destinations)
+    destinations = [
+        "New York",
+        "Paris",
+        "Tokyo",
+        "London",
+        "Sydney",
+        "Los Angeles",
+        "Chicago",
+        "Toronto",
+        "Berlin",
+        "Madrid"
+    ]
+
+    import random
+    from client.student import Student
+    def generate_students(N, destinations) -> list[Student]:
+        students = []
+        for i in range(N):
+            email = f"student{i}@mail.com"
+            preferences = tuple(random.sample(destinations, 4))
+            student = Student(email, preferences)
+            students.append(student)
+        return students
+
+    from client.sseclient import SSEClient
+    from client.thread_pool import ThreadPool
+
     students = generate_students(4, destinations)
     def on_message_callback(data):
         print("SSECLIENT Received data:", data)
 
-    time.sleep(1)
     with ThreadPool() as pool:
 
         # Send preferences
@@ -157,27 +118,6 @@ def main():
             resp = get_assignment_future.result()
             
             print(f"Result for {student.email}: {resp}")
-
-        
-
-
-
-            
-
-        
-        
-
-    # student_0 = students[0]
-    # future_assign = pool.submit(get_assignment,  student_0.email, student_0.preferences)
-
-    # res_assign = future_assign.result()
-    # print("Result", res_assign)
-    
-
-
-
-
-
 
 
 

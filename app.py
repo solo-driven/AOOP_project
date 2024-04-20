@@ -2,7 +2,7 @@ import threading
 import tkinter as tk
 from tkinter import messagebox
 
-from client.client import get_assignment, get_destinations, listen_for_updates, send_preferences
+from client.client import get_assignment, get_destinations,  send_preferences
 from client.sseclient import SSEClient
 
 class CitySelectionForm:
@@ -11,7 +11,13 @@ class CitySelectionForm:
         master.title("City Selection Form")
         self.master.resizable(False, False)
 
-        self.cities = [(city.title(), False) for city in get_destinations()]
+        resp = get_destinations()
+        if resp.status_code != 200:
+            messagebox.showerror("Error", f"Failed to get destinations: {resp}")
+            return
+        
+
+        self.cities = [(city.title(), False) for city in resp.body]
         self.selected_cities = []
         self.email = ""
         self.create_widgets()
