@@ -4,8 +4,8 @@ import tkinter as tk
 from tkinter import messagebox
 import re
 
-from client.client import get_assignment, get_destinations, send_preferences, update_preferences
-from client.sseclient import SSEClient
+from client import get_assignment, get_destinations, send_preferences, update_preferences
+from client import SSEClient
 
 
 class CitySelectionForm:
