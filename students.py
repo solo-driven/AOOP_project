@@ -77,24 +77,28 @@ class CitySelectionForm:
             return
 
         # Update self.cities with the latest selections
-        self.cities = [(city, var.get()) for city, var in zip(
+        temp_cities = [(city, var.get()) for city, var in zip(
             self.cities, self.city_vars)]
 
         # Update self.selected_cities with the selected cities
-        self.selected_cities = [city[0] for city, selected in self.cities if selected]
+        self.selected_cities = [city[0] for city, selected in temp_cities if selected]
         print(self.selected_cities)
         if(self.email == ""):
             self.email = self.email_entry.get()
+            
         else:
             pass
 
         if not self.email:
             messagebox.showerror("Error", "Please enter your email")
+            self.email = ""
             return
         if not self.is_valid_email(self.email):
             messagebox.showerror("Error", "Please enter a valid email address")
+            self.email = ""
             return
-
+        print(self.selected_cities)
+        print(self.email)
         messagebox.showinfo("Selected Cities", f"Selected Cities: {', '.join(self.selected_cities)}\nEmail: {self.email}")
         print(self.up)
         if(self.up):
