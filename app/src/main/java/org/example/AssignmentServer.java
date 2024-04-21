@@ -15,7 +15,6 @@ public class AssignmentServer extends Server {
     private Set<Student> students = Collections.synchronizedSet(new LinkedHashSet<>());
     private Map<Student, String> assignments = new ConcurrentHashMap<>();
     private Map<Student, PrintWriter> studentConnections = new ConcurrentHashMap<>();
-    private Population population;
 
     public AssignmentServer(int port) throws IOException {
         super(port);
@@ -55,9 +54,9 @@ public class AssignmentServer extends Server {
         double crossoverProb = 0.90; // Choose any crossover rate
         int maxGenerations = 10000;
         int maxNoImprovementCount = 750;
-        this.population = new Population(new ArrayList<>(destinations), new ArrayList<>(students), populationSize, maxGenerations, maxNoImprovementCount, mutationProb, crossoverProb);
-        this.population.initialize();
-        Gene solution = this.population.evolve();
+        Population population = new Population(new ArrayList<>(destinations), new ArrayList<>(students), populationSize, maxGenerations, maxNoImprovementCount, mutationProb, crossoverProb);
+        population.initialize();
+        Gene solution = population.evolve();
         return solution.getAssignment();
     }
 
