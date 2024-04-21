@@ -36,10 +36,8 @@ def send_preferences(email, preferences, method="POST") -> Response:
     path = "/preferences"
     headers = {"Content-Type": "application/json"}
     body = json.dumps({"email": email, "preferences": preferences})
-    resp = send_http_request(method, path, headers, body)
-
-    return resp
-
+    
+    return send_http_request(method, path, headers, body)
 
 
 def update_preferences(email, preferences) -> Response:

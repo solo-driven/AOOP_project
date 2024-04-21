@@ -225,7 +225,6 @@ public class AssignmentServer extends Server {
     private Response handlePostPreferences(Request req) {
         Student student;
 
-        
         student = getStudentFromBody(req.body);
 
         
@@ -241,11 +240,8 @@ public class AssignmentServer extends Server {
                 new Message("Student with email " + student.email + " already exists"));
         }
 
-        // Add student to list
         students.add(student);
-        System.out.println("Student added: " + student.email + " " + student.preferences);
-        System.out.println("Students: " + students);
-        // Handle POST /preferences
+
         return new RESTResponse(201, "Created", new Message("Student with email " + student.email + " created"));
     }
 
