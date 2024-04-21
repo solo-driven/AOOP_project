@@ -2,7 +2,7 @@ import socket
 import threading
 from typing import Callable
 
-from client.response import Response
+from response import Response
 from time import sleep
 
 

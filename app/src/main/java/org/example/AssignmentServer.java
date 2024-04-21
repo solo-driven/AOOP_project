@@ -12,7 +12,6 @@ import com.google.gson.JsonSyntaxException;
 public class AssignmentServer extends Server {
     private String destinations_path = "/destinations.csv";
     private Set<Destination> destinations;
-    private GeneticAlgorithm geneticAlgorithm;
     private Set<Student> students = Collections.synchronizedSet(new LinkedHashSet<>());
     private Map<Student, String> assignments = new ConcurrentHashMap<>();
     private Map<Student, PrintWriter> studentConnections = new ConcurrentHashMap<>();
@@ -20,7 +19,6 @@ public class AssignmentServer extends Server {
 
     public AssignmentServer(int port) throws IOException {
         super(port);
-        this.geneticAlgorithm = new GeneticAlgorithm();
 
         // Get destinations from file
         InputStream in = getClass().getResourceAsStream(this.destinations_path);

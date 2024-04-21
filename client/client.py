@@ -4,7 +4,7 @@ import json
 SERVER_HOST = 'localhost'
 SERVER_PORT = 8080
 
-from client.response import Response
+from response import Response
 
 def send_http_request(method, path, headers={}, body="") -> Response:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -73,7 +73,7 @@ def main():
     ]
 
     import random
-    from client.student import Student
+    from student import Student
     def generate_students(N, destinations) -> list[Student]:
         students = []
         for i in range(N):
@@ -83,8 +83,8 @@ def main():
             students.append(student)
         return students
 
-    from client.sseclient import SSEClient
-    from client.thread_pool import ThreadPool
+    from sseclient import SSEClient
+    from thread_pool import ThreadPool
 
     students = generate_students(4, destinations)
     def on_message_callback(data):
