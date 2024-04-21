@@ -127,6 +127,7 @@ public class Population {
 
         // Continue evolving until a solution meeting the criteria is found
         while (generationsCounter <= this.maxGenerations && noImprovementCount < this.maxNoImprovementCount) {
+            // System.out.println("Stuck in evolve");
             // Evolution steps
             List<Gene> newPopulation = new ArrayList<>();
             Map<Gene, Integer> fitnessMap = calculateFitness();
@@ -145,11 +146,16 @@ public class Population {
 
             // Crossover and mutation to fill the rest of the new population
             while (newPopulation.size() < this.size) {
+                // System.out.println("Generation no:" + generationsCounter);
+                // System.out.println("Stuck in fill Population");
                 Gene parent1 = select();
                 Gene parent2 = select();
-                while (parent1 == parent2) {
-                    parent2 = select();
-                }
+                // System.out.println("this population size: " + this.size + " newPopulation size: " + newPopulation.size());
+                // while (parent1 == parent2) {
+                //     // System.out.println("parent 1: " + parent1 + " parent 2: " + parent2);
+                //     System.out.println("Stuck in parent select");
+                //     parent2 = select();
+                // }
                 if (this.crossoverProb > Math.random()) {
                     Gene child = parent1.crossover(parent2);
                     mutate(child);
@@ -175,8 +181,8 @@ public class Population {
                 previousFitness = minFitness;
                 noImprovementCount = 0;
             }
-            if (noImprovementCount >= 500 && noImprovementCount % 50 == 0)
-                System.out.println("No Improvement count: " + noImprovementCount);
+            // if (noImprovementCount >= 500 && noImprovementCount % 50 == 0)
+                // System.out.println("No Improvement count: " + noImprovementCount);
 
 //            System.out.println("Generation No: " + generationsCounter + " Gene: " + fittestGene.calculateFitness());
             // Increment generation counter

@@ -56,7 +56,7 @@ public class Gene {
             if (currentStudents < maxStudents) {
                 return destinationIndex;
             }
-            System.out.println("Stuck in chooseDestinationFromPreference");
+            // System.out.println("Stuck in chooseDestinationFromPreference");
         } while (visitedDestinations.size() < preferences.size()); // Continue until all preferences are visited
 
         // If all preferences are visited and none of them are available, assign to a random available destination
@@ -170,7 +170,7 @@ public class Gene {
             int currentStudents = entry.getValue();
             int maxStudents = destination.getMaxStudents();
             while (currentStudents > maxStudents) {
-                System.out.println("Stuck in removeExceedingDestinationCapacity");
+                // System.out.println("Stuck in removeExceedingDestinationCapacity");
                 Random random = new Random();
                 List<Student> assignedStudents = findAssignedStudents(currentDestinationIndex);
                 Student randomAssignedStudent = assignedStudents.get(random.nextInt(assignedStudents.size()));
@@ -262,7 +262,7 @@ public class Gene {
         int firstStudentIndex = twoStudentIndices.getFirst();
         int secondStudentIndex = twoStudentIndices.getSecond();
         while (firstStudentIndex == secondStudentIndex) {
-            System.out.println("Stuck in swapMutate");
+            // System.out.println("Stuck in swapMutate");
             secondStudentIndex = getUniqueStudentIndices().getSecond();
         }
         if (secondStudentIndex != -1)
@@ -322,10 +322,13 @@ public class Gene {
         Random random = new Random();
         int indexA = random.nextInt(this.students.size());
         int indexB = (this.students.size() == 1) ? -1 : random.nextInt(this.students.size());
+        // System.out.println("Students size: " + students.size());
         while (indexA == indexB) {
-            System.out.println("Stuck in getUniqueStudentIndices");
+            // System.out.println("Stuck in getUniqueStudentIndices");
+            // System.out.println("index A: " + indexA + " index B: " + indexB);
             indexB = random.nextInt(this.students.size());
         }
+        // System.out.println("index B:" + indexB);
         return new Pair(indexA, indexB);
     }
 }

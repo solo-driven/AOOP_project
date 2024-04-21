@@ -52,8 +52,8 @@ public class AssignmentServer extends Server {
         int populationSize = 50;
         double mutationProb = 0.10; // Choose any mutation rate
         double crossoverProb = 0.90; // Choose any crossover rate
-        int maxGenerations = 10000;
-        int maxNoImprovementCount = 750;
+        int maxGenerations = 1000;
+        int maxNoImprovementCount = 75;
         Population population = new Population(new ArrayList<>(destinations), new ArrayList<>(students), populationSize, maxGenerations, maxNoImprovementCount, mutationProb, crossoverProb);
         population.initialize();
         Gene solution = population.evolve();
@@ -226,6 +226,7 @@ public class AssignmentServer extends Server {
             return validationResponse;
         }
 
+        System.out.println("Students: " + students);
         if (students.contains(student)) {
             return new RESTResponse(400, "Bad Request",
                 new Message("Student with email " + student.email + " already exists"));
