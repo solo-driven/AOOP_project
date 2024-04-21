@@ -3,7 +3,6 @@ import threading
 from typing import Callable
 
 from client.response import Response
-from time import sleep
 
 
 class SSEClient:
@@ -35,14 +34,13 @@ class SSEClient:
             reading_headers = True
             while True:
                 data = s.recv(1024)
-                #print("data", data, len(data))
                 if not data:
                     break
                 data = data.decode('utf-8')
                 response += data
 
                 if reading_headers:
-                    # Check if we've received all the headers
+                    # Check if all the headers are received 
                     if '\r\n\r\n' in response:
                         resp = Response.from_string(response)
                         if resp.status_code != 200:
@@ -63,6 +61,5 @@ class SSEClient:
                                     event_dict["event"] = line.split(": ", 1)[1]
                                 elif line.startswith("data:"):
                                     event_dict["data"] = line.split(": ", 1)[1]
-                                elif line.startswith("id:"):
-                                    event_dict["id"] = line.split(": ", 1)[1]
+
                             self.on_message(event_dict)

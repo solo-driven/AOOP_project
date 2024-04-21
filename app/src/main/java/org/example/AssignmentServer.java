@@ -19,6 +19,29 @@ public class AssignmentServer extends Server {
     public AssignmentServer(int port) throws IOException {
         super(port);
 
+        initDestinations();
+
+        registerRequestHandler(new Route("GET", "/destinations"), this::handleGetDestinations);
+        registerRequestHandler(new Route("POST", "/assign"), this::handleAssignment);
+        registerRequestHandler(new Route("POST", "/preferences"), this::handlePostPreferences);
+        registerRequestHandler(new Route("PUT", "/preferences"), this::handlePutPreferences);
+        registerRequestHandler(new Route("GET", "/students"), this::handleGetStudents);
+        registerRequestHandler(new Route("GET", "/assignment-stream"), this::handleAssignmentStream);
+        registerRequestHandler(new Route("GET", "/assignments"), this::handleGetAssignments);
+
+
+        addExceptionHandler(InvalidEmailException.class, (exception) -> 
+            new RESTResponse(400, "Bad Request", new Message(exception.getMessage()))
+        );
+
+        addExceptionHandler(JsonSyntaxException.class, (exc)->
+            new RESTResponse(400, "Bad Request", new Message("Invalid JSON format in request body"))
+        );
+
+    }
+
+
+    void initDestinations() {
         // Get destinations from file
         InputStream in = getClass().getResourceAsStream(this.destinations_path);
         BufferedReader reader = new BufferedReader(new InputStreamReader(in));
@@ -32,20 +55,10 @@ public class AssignmentServer extends Server {
             int max_students = Integer.parseInt(parts[0]);
             this.destinations.add(new Destination(city, max_students));
         }
-
-        setupHandlers();
     }
 
-    protected void setupHandlers() {
-        registerRoute(new Route("GET", "/destinations"), this::handleGetDestinations);
-        registerRoute(new Route("POST", "/assign"), this::handleAssignment);
-        registerRoute(new Route("POST", "/preferences"), this::handlePostPreferences);
-        registerRoute(new Route("PUT", "/preferences"), this::handlePutPreferences);
-        registerRoute(new Route("GET", "/students"), this::handleGetStudents);
-        registerRoute(new Route("GET", "/assignment-stream"), this::handleAssignmentStream);
-        registerRoute(new Route("GET", "/assignments"), this::handleGetAssignments);
 
-    }
+
 
     private Map<Student, String> getSolution() {
         // Initialize Population
@@ -74,6 +87,10 @@ public class AssignmentServer extends Server {
             return new RESTResponse(400, "Bad Request", new Message("clientId query parameter not provided."));
         }
 
+        if (!Student.isValidEmail(client_email)) {
+            return new RESTResponse(400, "Bad Request", new Message("Invalid email: " + client_email));
+        }
+
         Student student;
 
         synchronized (students) {
@@ -90,16 +107,15 @@ public class AssignmentServer extends Server {
             return validationResponse;
         }
 
-        synchronized (studentConnections) {
 
-            try {
-                PrintWriter out = new PrintWriter(req.clientSocket.getOutputStream(), true);
-                studentConnections.put(student, out);
-            } catch (IOException e) {
-                e.printStackTrace();
-                return new RESTResponse(500, "Internal Server Error", new Message("Failed to get output stream"));
-            }
+        try {
+            PrintWriter out = new PrintWriter(req.clientSocket.getOutputStream(), true);
+            studentConnections.put(student, out);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return new RESTResponse(500, "Internal Server Error", new Message("Failed to get output stream"));
         }
+    
 
         // Create a response with the appropriate headers for server-sent events
         SSEResponse response = new SSEResponse(200, "OK");
@@ -110,11 +126,9 @@ public class AssignmentServer extends Server {
     private Response handleAssignment(Request req) {
         Gson gson = new Gson();
         Student student;
-        try{
-            student = getStudentFromBody(req.body);
-        } catch (JsonSyntaxException e) {
-            return new RESTResponse(400, "Bad Request", new Message("Invalid JSON format in request body"));
-        }
+       
+        student = getStudentFromBody(req.body);
+
 
         // Validate student
         Response validationResponse = validateStudent(student);
@@ -137,21 +151,19 @@ public class AssignmentServer extends Server {
             for (Map.Entry<Student, String> entry : newAssignments.entrySet()) {
                 Student currentStudent = entry.getKey();
                 String newAssignment = entry.getValue();
-                //System.out.println( "handleAssignment Current student: " + currentStudent + " new assignment: " + newAssignment);
 
                 String oldAssignment = assignments.get(currentStudent);
                 if (oldAssignment == null || !oldAssignment.equals(newAssignment)) {
                     // Notify student of assignment change
                     PrintWriter out = studentConnections.get(currentStudent);
-                    //System.out.println("handleAssignment Out for " + currentStudent + " is " + out);
                     if (out != null) {
                         //System.out.println("handleAssignment out is not null");
    
                         SSEEvent assignment = new SSEEvent("assignment", newAssignment + " to " + currentStudent.email + " by " + student.email);
+
+                        //SSEEvent assignment = new SSEEvent("assignment", newAssignment);
                         out.write(assignment.toString());
                         out.flush();
-
-
                     }
 
                     // Update assignment in map
@@ -187,7 +199,7 @@ public class AssignmentServer extends Server {
         return new RESTResponse(200, "OK", body);
     }
 
-    private Student getStudentFromBody(String body) throws JsonSyntaxException{
+    private Student getStudentFromBody(String body) {
         Gson gson = new Gson();
         JsonStudent jsonStudent = gson.fromJson(body, JsonStudent.class);
     
@@ -213,12 +225,9 @@ public class AssignmentServer extends Server {
     private Response handlePostPreferences(Request req) {
         Student student;
 
-        try {
-            System.out.println();
-            student = getStudentFromBody(req.body);
-        } catch (JsonSyntaxException e) {
-            return new RESTResponse(404, "Bad Request", new Message("Invalid JSON format in request body"));
-        }
+        
+        student = getStudentFromBody(req.body);
+
         
         // Validate student
         Response validationResponse = validateStudent(student); 
@@ -265,8 +274,7 @@ public class AssignmentServer extends Server {
 
         // validate destination
         for (Destination destination : student.getPreferences().values()) {
-            boolean destinationExists = destinations.contains(destination);
-            if (!destinationExists) {
+            if (!destinations.contains(destination)) {
                 return new RESTResponse(400, "Bad Request", new Message("Invalid destination: '" + destination.getName() + "'"));
             }
         }
@@ -275,8 +283,8 @@ public class AssignmentServer extends Server {
     }
 
     private Response handlePutPreferences(Request req) {
-        Gson gson = new Gson();
-        Student updatedStudent = gson.fromJson(req.body, Student.class);
+       
+        Student updatedStudent = getStudentFromBody(req.body);
 
         Response validationResponse = validateStudent(updatedStudent);
         if (validationResponse != null) {

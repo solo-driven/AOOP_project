@@ -14,21 +14,52 @@ public abstract class Server {
     protected ServerSocket serverSocket;
     protected volatile boolean running = true;
     protected ExecutorService pool = Executors.newCachedThreadPool();
-    protected Map<Route, Handler> handlers = new HashMap<>();
+    protected Map<Route, RequestHandler> handlers = new HashMap<>();
+    private Map<Class<? extends Exception>, ExceptionHandler> exceptionHandlers = new HashMap<>();
+
 
     @FunctionalInterface
-    interface Handler {
+    interface RequestHandler {
         Response handle(Request requestBody);
+    }
+
+    @FunctionalInterface
+    interface ExceptionHandler {
+        Response handle(Exception e);
     }
 
     public Server(int port) throws IOException {
         this.port = port;
-        setupHandlers();
     }
 
-    protected abstract void setupHandlers();
 
-    protected void registerRoute(Route route, Handler handler) {
+    public void addExceptionHandler(Class<? extends Exception> exceptionClass, ExceptionHandler handler) {
+        exceptionHandlers.put(exceptionClass, handler);
+    }
+
+    protected Response handleRequest(Request req) {
+        Route route = new Route(req.method, req.path);
+        RequestHandler handler = handlers.get(route);
+    
+        if (handler == null) {
+            return new RESTResponse(404, "Not Found", new Message("The requested route does not exist."));
+        }
+    
+        try {
+            return handler.handle(req);
+        } catch (Exception e) {
+            for (Map.Entry<Class<? extends Exception>, ExceptionHandler> entry : exceptionHandlers.entrySet()) {
+                if (entry.getKey().isInstance(e)) {
+                    return entry.getValue().handle(e);
+                }
+            }
+        }
+    
+        return new RESTResponse(500, "Internal Server Error", new Message("An error occurred while processing the request"));
+    }
+    
+
+    protected void registerRequestHandler(Route route, RequestHandler handler) {
         handlers.put(route, handler);
     }
 
@@ -53,19 +84,8 @@ public abstract class Server {
 
             Request req = new Request(clientSocket);
             System.out.println(req);
-
-            Route route = new Route(req.method, req.path);
-
-            Handler handler = handlers.get(route);
-
-            Response response;
-
-            if (handler != null) {
-                response = handler.handle(req);
-            } else {
-                response = new Response(404, "Not Found",
-                        "The requested route does not exist.");
-            }
+            
+            Response response = handleRequest(req);
 
             OutputStream outputStream = clientSocket.getOutputStream();
             outputStream.write(response.toString().getBytes());
