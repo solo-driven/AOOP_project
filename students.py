@@ -5,7 +5,8 @@ from tkinter import messagebox
 import re
 
 from client import get_assignment, get_destinations, send_preferences, update_preferences
-from client import SSEClient
+from client import SSEClient, SERVER_PORT
+
 
 
 class CitySelectionForm:
@@ -117,7 +118,7 @@ class CitySelectionForm:
     def show_assignment(self):
 
         self.master.destroy()
-        client = SSEClient("localhost", 10000,
+        client = SSEClient("localhost", SERVER_PORT,
                         "/assignment-stream", self.on_message_callback)
         client.connect_to_server(self.email)
         client.initial_response_received.wait()
