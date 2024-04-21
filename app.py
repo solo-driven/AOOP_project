@@ -86,7 +86,7 @@ class CitySelectionForm:
 
         messagebox.showinfo("Selected Cities", f"Selected Cities: {', '.join(self.selected_cities)}\nEmail: {self.email}")
         send_preferences(email=self.email, preferences=self.selected_cities)
-        client = SSEClient("localhost", 10000,
+        client = SSEClient("localhost", 8080,
                         "/assignment-stream", self.on_message_callback)
         client.connect_to_server(self.email)
         client.initial_response_received.wait()

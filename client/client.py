@@ -1,8 +1,8 @@
 import socket
 import json
 
-SERVER_HOST = '0.0.0.0'
-SERVER_PORT = 10000
+SERVER_HOST = 'localhost'
+SERVER_PORT = 8080
 LISTENER_PORT = 54321
 
 from client.response import Response
