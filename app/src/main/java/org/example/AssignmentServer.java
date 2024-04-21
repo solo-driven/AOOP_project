@@ -159,9 +159,7 @@ public class AssignmentServer extends Server {
                     if (out != null) {
                         //System.out.println("handleAssignment out is not null");
    
-                        SSEEvent assignment = new SSEEvent("assignment", newAssignment + " to " + currentStudent.email + " by " + student.email);
-
-                        //SSEEvent assignment = new SSEEvent("assignment", newAssignment);
+                        SSEEvent assignment = new SSEEvent("assignment", newAssignment);
                         out.write(assignment.toString());
                         out.flush();
                     }

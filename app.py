@@ -86,10 +86,6 @@ class CitySelectionForm:
 
         messagebox.showinfo("Selected Cities", f"Selected Cities: {', '.join(self.selected_cities)}\nEmail: {self.email}")
         send_preferences(email=self.email, preferences=self.selected_cities)
-        client = SSEClient("localhost", 8080,
-                        "/assignment-stream", self.on_message_callback)
-        client.connect_to_server(self.email)
-        client.initial_response_received.wait()
         self.show_assignment()
 
 
@@ -102,7 +98,10 @@ class CitySelectionForm:
     def show_assignment(self):
 
         self.master.destroy()
-
+        client = SSEClient("localhost", 10000,
+                        "/assignment-stream", self.on_message_callback)
+        client.connect_to_server(self.email)
+        client.initial_response_received.wait()
         assignment_window = tk.Tk()
         assignment_window.title("Assignment Result")
         assignment_window.geometry("1000x800")  # Set a larger window size
