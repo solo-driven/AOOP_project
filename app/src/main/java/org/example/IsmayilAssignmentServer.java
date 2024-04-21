@@ -1,5 +1,6 @@
 package org.example;
 
+
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -9,34 +10,63 @@ import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 
 
-public class AssignmentServer extends Server {
-    private String destinations_path = "/destinations.csv";
-    private Set<Destination> destinations;
-    private GeneticAlgorithm geneticAlgorithm;
-    private Set<Student> students = Collections.synchronizedSet(new LinkedHashSet<>());
+public class IsmayilAssignmentServer extends Server {
+    private String destinationsPath = "/destinations.csv";
+    private List<Destination> destinations;
+    private List<Student> students = Collections.synchronizedList(new ArrayList<>());
+    private Population population;
     private Map<Student, String> assignments = new ConcurrentHashMap<>();
     private Map<Student, PrintWriter> studentConnections = new ConcurrentHashMap<>();
-    private Population population;
 
-    public AssignmentServer(int port) throws IOException {
+    public IsmayilAssignmentServer(int port) throws IOException {
         super(port);
-        this.geneticAlgorithm = new GeneticAlgorithm();
 
-        // Get destinations from file
-        InputStream in = getClass().getResourceAsStream(this.destinations_path);
+        // Fill destinations from file
+        fillDestinations(this.destinationsPath);
+
+        // runAlgorithm();
+
+        setupHandlers();
+    }
+
+
+    private void runAlgorithm() {
+        // Initialize Population
+        int populationSize = 50;
+        double mutationProb = 0.10; // Choose any mutation rate
+        double crossoverProb = 0.90; // Choose any crossover rate
+        int maxGenerations = 10000;
+        int maxNoImprovementCount = 750;
+        this.population = new Population(this.destinations, this.students, populationSize, maxGenerations, maxNoImprovementCount, mutationProb, crossoverProb);
+        this.population.initialize();
+    }
+
+    private Map<Student, String> getSolution() {
+        // Initialize Population
+        int populationSize = 50;
+        double mutationProb = 0.10; // Choose any mutation rate
+        double crossoverProb = 0.90; // Choose any crossover rate
+        int maxGenerations = 10000;
+        int maxNoImprovementCount = 750;
+        this.population = new Population(this.destinations, this.students, populationSize, maxGenerations, maxNoImprovementCount, mutationProb, crossoverProb);
+        this.population.initialize();
+        Gene solution = this.population.evolve();
+        return solution.getAssignment();
+    }
+
+    private void fillDestinations(String destinationsPath) {
+        InputStream in = getClass().getResourceAsStream(this.destinationsPath);
         BufferedReader reader = new BufferedReader(new InputStreamReader(in));
 
-        this.destinations = new HashSet<>();
+        this.destinations = new ArrayList<>();
         List<String> lines = reader.lines().collect(Collectors.toList());
         for (String line : lines) {
             String[] parts = line.split(", ");
-
             String city = parts[1];
-            int max_students = Integer.parseInt(parts[0]);
-            this.destinations.add(new Destination(city, max_students));
+            int maxStudents = Integer.parseInt(parts[0]);
+            Destination destination = new Destination(city, maxStudents);
+            this.destinations.add(destination);
         }
-
-        setupHandlers();
     }
 
     protected void setupHandlers() {
@@ -50,20 +80,6 @@ public class AssignmentServer extends Server {
 
     }
 
-    private Map<Student, String> getSolution() {
-        // Initialize Population
-        int populationSize = 50;
-        double mutationProb = 0.10; // Choose any mutation rate
-        double crossoverProb = 0.90; // Choose any crossover rate
-        int maxGenerations = 10000;
-        int maxNoImprovementCount = 750;
-        this.population = new Population(new ArrayList<>(destinations), new ArrayList<>(students), populationSize, maxGenerations, maxNoImprovementCount, mutationProb, crossoverProb);
-        this.population.initialize();
-        Gene solution = this.population.evolve();
-        return solution.getAssignment();
-    }
-
-
     private Response handleGetAssignments(Request req) {
         Gson gson = new Gson();
         String body = gson.toJson(assignments);
@@ -72,15 +88,16 @@ public class AssignmentServer extends Server {
     }
 
     private Response handleAssignmentStream(Request req) {
+        System.out.println("#########################################");
         String client_email = req.queryParams.get("clientId");
         if (client_email == null) {
             return new RESTResponse(400, "Bad Request", new Message("clientId query parameter not provided."));
         }
 
         Student student;
-
+        System.out.println("Students list: " + students);
         synchronized (students) {
-            student = students.stream().filter(s -> s.email.equals(client_email)).findFirst().orElse(null);
+            student = students.stream().filter(s -> s.getEmail().equals(client_email)).findFirst().orElse(null);
         }
 
         if (student == null) {
@@ -97,6 +114,7 @@ public class AssignmentServer extends Server {
 
             try {
                 PrintWriter out = new PrintWriter(req.clientSocket.getOutputStream(), true);
+                //System.out.println("handleAssignmentStream Out for " + student + " is " + out);
                 studentConnections.put(student, out);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -112,12 +130,7 @@ public class AssignmentServer extends Server {
 
     private Response handleAssignment(Request req) {
         Gson gson = new Gson();
-        Student student;
-        try{
-            student = getStudentFromBody(req.body);
-        } catch (JsonSyntaxException e) {
-            return new RESTResponse(400, "Bad Request", new Message("Invalid JSON format in request body"));
-        }
+        Student student = gson.fromJson(req.body, Student.class);
 
         // Validate student
         Response validationResponse = validateStudent(student);
@@ -127,10 +140,9 @@ public class AssignmentServer extends Server {
 
         // if student is not in the list
         if (!students.contains(student)) {
-            return new RESTResponse(404, "Not Found", new Message("Student with email " + student.email
+            return new RESTResponse(404, "Not Found", new Message("Student with email " + student.getEmail()
                     + " not found. Please add student to list of preferences first."));
         }
-
         Map<Student, String> newAssignments;
         synchronized (this) {
             // Assign students
@@ -150,7 +162,7 @@ public class AssignmentServer extends Server {
                     if (out != null) {
                         //System.out.println("handleAssignment out is not null");
    
-                        SSEEvent assignment = new SSEEvent("assignment", newAssignment + " to " + currentStudent.email + " by " + student.email);
+                        SSEEvent assignment = new SSEEvent("assignment", newAssignment + " to " + currentStudent.getEmail() + " by " + student.getEmail());
                         out.write(assignment.toString());
                         out.flush();
 
@@ -182,7 +194,11 @@ public class AssignmentServer extends Server {
     }
 
     private Response handleGetDestinations(Request req) {
-        List<String> cities = this.destinations.stream().map(Destination::getName).collect(Collectors.toList());
+        Set<String> cities = new  HashSet<>();
+        for (Destination destination : this.destinations) {
+            cities.add(destination.getName());
+        }
+        System.out.println("Cities: " + cities);
 
         Gson gson = new Gson();
         String body = gson.toJson(cities);
@@ -190,85 +206,64 @@ public class AssignmentServer extends Server {
         return new RESTResponse(200, "OK", body);
     }
 
-    private Student getStudentFromBody(String body) throws JsonSyntaxException{
-        Gson gson = new Gson();
-        JsonStudent jsonStudent = gson.fromJson(body, JsonStudent.class);
-    
-        // Convert List<String> to Map<Integer, Destination>
-        Map<Integer, Destination> preferences = new HashMap<>();
-        for (int i = 0; i < jsonStudent.preferences.size(); i++) {
-            String cityName = jsonStudent.preferences.get(i);
-            Destination destination = destinations.stream()
-                .filter(d -> d.getName().equals(cityName))
-                .findFirst()
-                .orElse(null);
-            if (destination != null) {
-                preferences.put(i, destination);
-            } else {
-                throw new JsonSyntaxException("Invalid destination: " + cityName);
-            }
-        }
-    
-        return new Student(jsonStudent.email, preferences);
-    }
-
-
     private Response handlePostPreferences(Request req) {
+        Gson gson = new Gson();
         Student student;
 
         try {
-            System.out.println();
-            student = getStudentFromBody(req.body);
+            student = gson.fromJson(req.body, Student.class);
         } catch (JsonSyntaxException e) {
             return new RESTResponse(404, "Bad Request", new Message("Invalid JSON format in request body"));
         }
-        
         // Validate student
-        Response validationResponse = validateStudent(student); 
+        Response validationResponse = validateStudent(student);
         if (validationResponse != null) {
             return validationResponse;
         }
+        System.out.println("Student in POST:" + student);
+        synchronized (students) {
+            // Student already exists
+            for (Student s : students) {
+                if (s.getEmail().equals(student.getEmail())) {
+                    return new RESTResponse(400, "Bad Request",
+                            new Message("Student with email " + student.getEmail() + " already exists"));
+                }
+            }
 
-        if (students.contains(student)) {
-            return new RESTResponse(400, "Bad Request",
-                new Message("Student with email " + student.email + " already exists"));
         }
-
         // Add student to list
         students.add(student);
-        System.out.println("Student added: " + student.email + " " + student.preferences);
-        System.out.println("Students: " + students);
+        System.out.println("Students list in POST: " + students);
         // Handle POST /preferences
-        return new RESTResponse(201, "Created", new Message("Student with email " + student.email + " created"));
+        return new RESTResponse(201, "Created", new Message("Student with email " + student.getEmail() + " created"));
     }
 
     private Response validateStudent(Student student) {
         if (student == null) {
             return new RESTResponse(400, "Bad Request", new Message("Missing body"));
         }
-        if (student.preferences == null) {
+        if (student.getPreferences() == null) {
             return new RESTResponse(400, "Bad Request", new Message("Missing preferences"));
         }
 
-        if (student.email == null) {
+        if (student.getEmail() == null) {
             return new RESTResponse(400, "Bad Request", new Message("Missing email"));
         }
 
         // no repeated preferences
-        Set<Destination> uniquePreferences = new HashSet<>(student.getPreferences().values());
-        if (uniquePreferences.size() != student.getPreferences().size()) {
-            return new RESTResponse(400, "Bad Request", new Message("Repeated preferences"));
-        }
-        
+        // Set<String> uniquePreferences = new HashSet<>(student.getPreferences());
+        // if (uniquePreferences.size() != student.getPreferences().size()) {
+        //     return new RESTResponse(400, "Bad Request", new Message("Repeated preferences"));
+        // }
+
         // preferences must be between 0 and 5
-        if (student.preferences.size() > 5 || student.preferences.size() < 1){
+        if (student.getPreferences().size() > 5) {
             return new RESTResponse(400, "Bad Request", new Message("Too many preferences, maximum is 5"));
         }
 
         // validate destination
         for (Destination destination : student.getPreferences().values()) {
-            boolean destinationExists = destinations.contains(destination);
-            if (!destinationExists) {
+            if (!destinations.contains(destination)) {
                 return new RESTResponse(400, "Bad Request", new Message("Invalid destination: '" + destination.getName() + "'"));
             }
         }
@@ -288,17 +283,17 @@ public class AssignmentServer extends Server {
         synchronized (students) {
             // Find and update student in list
             for (Student student : students) {
-                if (student.email.equals(updatedStudent.email)) {
-                    student.preferences = updatedStudent.preferences;
+                if (student.getEmail().equals(updatedStudent.getEmail())) {
+                    student.setPreferences(updatedStudent.getPreferences());
                     return new RESTResponse(200, "OK",
-                            new Message("Student with email " + student.email + " updated"));
+                            new Message("Student with email " + student.getEmail() + " updated"));
                 }
             }
         }
 
         // If student not found in list
         return new RESTResponse(404, "Not Found",
-                new Message("Student with email " + updatedStudent.email + " not found"));
+                new Message("Student with email " + updatedStudent.getEmail() + " not found"));
     }
 
 }
