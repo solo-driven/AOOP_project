@@ -1,5 +1,6 @@
 package org.example;
 
+import org.geneticalgorithm.*;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
