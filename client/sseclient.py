@@ -4,7 +4,8 @@ from typing import Callable
 
 from client.response import Response
 
-
+# Server-Sent Events client,
+# connects to the server and listens for messages, calling the on_message callback when a message is received
 class SSEClient:
     def __init__(self, ip: str, port: int, path: str, on_message: Callable[[dict], None]):
         self.ip = ip

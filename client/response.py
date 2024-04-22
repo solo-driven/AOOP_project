@@ -1,6 +1,6 @@
 import json
 
-
+# Response class to represent the server's response, with status code, status message, headers, and body
 class Response:
     def __init__(self, status_code, status_message, headers, body):
         self.status_code = status_code
@@ -8,10 +8,11 @@ class Response:
         self.headers = headers
         self.body = body
         
-
+    # String representation of the response
     def __str__(self):
         return f"Response(status_code={self.status_code}, status_message={self.status_message}, headers={self.headers}, body={self.body})"
     
+    # Static method to create a Response object from a string
     @staticmethod
     def from_string(response_str, sep="\r\n"):
         lines = response_str.split(sep)

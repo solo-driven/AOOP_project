@@ -1,11 +1,12 @@
 import socket
 import json
+from client.response import Response
 
 SERVER_HOST = 'localhost'
 SERVER_PORT = 8080
 
-from client.response import Response
 
+# sending an HTTP request to the server
 def send_http_request(method, path, headers={}, body="") -> Response:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((SERVER_HOST, SERVER_PORT))
@@ -20,11 +21,10 @@ def send_http_request(method, path, headers={}, body="") -> Response:
         request_message = f"{request_line}{headers_line}\r\n{body}"
         s.sendall(request_message.encode('utf-8'))
 
-        # Receive the server's response
+        # Receiving the server's response
         data=''
         response = ''
         while True:
-
             data = s.recv(1024)
             if not data:
                 break
@@ -32,6 +32,7 @@ def send_http_request(method, path, headers={}, body="") -> Response:
 
         return Response.from_string(response)
 
+# sending preferences to the server
 def send_preferences(email, preferences, method="POST") -> Response:
     path = "/preferences"
     headers = {"Content-Type": "application/json"}
@@ -39,22 +40,19 @@ def send_preferences(email, preferences, method="POST") -> Response:
     
     return send_http_request(method, path, headers, body)
 
-
+# updating preferences on the server
 def update_preferences(email, preferences) -> Response:
     return send_preferences(email, preferences, "PUT")
 
+# taking destinations from the server
 def get_destinations() -> Response:
     path = "/destinations"
     return send_http_request("GET", path)
 
-
+# gets an assignment from the server
 def get_assignment(email, preferences) -> Response:
     path = "/assign"
     headers = {"Content-Type": "application/json"}
     body = json.dumps({"email": email, "preferences": preferences})
     
-
     return send_http_request("POST", path, headers, body)
-
-
-

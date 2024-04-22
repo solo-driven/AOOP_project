@@ -1,0 +1,320 @@
+# File: client.py
+
+import socket
+import json
+
+SERVER_HOST = 'localhost'
+SERVER_PORT = 8080
+
+from client.response import Response
+
+def send_http_request(method, path, headers={}, body="") -> Response:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.connect((SERVER_HOST, SERVER_PORT))
+        headers["Content-Length"] = str(len(body))  
+        request_line = f"{method} {path} HTTP/1.1\r\n"
+        headers_line = "".join(f"{k}: {v}\r\n" for k, v in headers.items())
+        request_message = f"{request_line}{headers_line}\r\n{body}"
+        s.sendall(request_message.encode('utf-8'))
+
+        # Receive the server's response
+        data=''
+        response = ''
+        while True:
+
+            data = s.recv(1024)
+            if not data:
+                break
+            response += data.decode('utf-8')
+
+        return Response.from_string(response)
+
+def send_preferences(email, preferences, method="POST") -> Response:
+    path = "/preferences"
+    headers = {"Content-Type": "application/json"}
+    body = json.dumps({"email": email, "preferences": preferences})
+    resp = send_http_request(method, path, headers, body)
+
+    return resp
+
+
+
+def update_preferences(email, preferences) -> Response:
+    return send_preferences(email, preferences, "PUT")
+
+def get_destinations() -> Response:
+    path = "/destinations"
+    return send_http_request("GET", path)
+
+
+def get_assignment(email, preferences) -> Response:
+    path = "/assign"
+    headers = {"Content-Type": "application/json"}
+    body = json.dumps({"email": email, "preferences": preferences})
+    
+
+    return send_http_request("POST", path, headers, body)
+
+
+
+
+def main():
+    
+    # for testing (in gui use get destinations)
+    destinations = [
+        "New York",
+        "Paris",
+        "Tokyo",
+        "London",
+        "Sydney",
+        "Los Angeles",
+        "Chicago",
+        "Toronto",
+        "Berlin",
+        "Madrid"
+    ]
+
+    import random
+    from client.student import Student
+    def generate_students(N, destinations) -> list[Student]:
+        students = []
+        for i in range(N):
+            email = f"student{i}@mail.com"
+            preferences = tuple(random.sample(destinations, 4))
+            student = Student(email, preferences)
+            students.append(student)
+        return students
+
+    from client.sseclient import SSEClient
+    from client.thread_pool import ThreadPool
+
+    students = generate_students(4, destinations)
+    def on_message_callback(data):
+        print("SSECLIENT Received data:", data)
+
+    with ThreadPool() as pool:
+
+        # Send preferences
+        student_futures = {}
+        for student in students:
+            future = pool.submit(send_preferences, student.email, student.preferences)
+            student_futures[student] = future
+        
+        for student, future in student_futures.items():
+            print(student.email, future.result())
+        
+        for student in students:
+            client = SSEClient(SERVER_HOST, SERVER_PORT, "/assignment-stream", on_message_callback)
+            client.connect_to_server(student.email)
+            client.initial_response_received.wait()
+            print("waited for stream to connect for", student.email)
+        
+        
+
+        # assign students
+        for student in students:
+            future = pool.submit(get_assignment, student.email, student.preferences)
+            student_futures[student] = future
+        
+        for student, get_assignment_future in student_futures.items():
+            resp = get_assignment_future.result()
+            
+            print(f"Result for {student.email}: {resp}")
+
+
+
+
+if __name__ == "__main__":
+    main()import os
+
+
+
+
+# Directory path
+directory = r'C:\Users\murad\Programming\A_OOP\Project_pull\AOOP_project\client'
+
+# Get all the Java files in the directory
+java_files = [file for file in os.listdir(directory) if file.endswith('.py')]
+
+print(java_files)
+# Merge the contents of the Java files into a single text file
+merged_content = ''
+for file in java_files:
+    with open(os.path.join(directory, file), 'r') as f:
+        merged_content += f.read()
+
+# Save the merged content into a text file
+with open('merged_files.txt', 'w') as f:
+    f.write(merged_content)# File: response.py
+
+import json
+
+
+class Response:
+    def __init__(self, status_code, status_message, headers, body):
+        self.status_code = status_code
+        self.status_message = status_message
+        self.headers = headers
+        self.body = body
+        
+
+    def __str__(self):
+        return f"Response(status_code={self.status_code}, status_message={self.status_message}, headers={self.headers}, body={self.body})"
+    
+    @staticmethod
+    def from_string(response_str, sep="\r\n"):
+        lines = response_str.split(sep)
+        _, status_code, status_message = lines[0].split(" ", 2)
+        status_code = int(status_code)
+
+        headers = {}
+        body = ""
+        for line in lines[1:]:
+            if not line:
+                break
+            key, value = line.split(": ")
+            headers[key] = value
+
+        body = ""
+        if lines[-1]:
+            body = json.loads(lines[-1])
+     
+
+        return Response(status_code, status_message, headers, body)
+# File: sseclient.py
+
+import socket
+import threading
+from typing import Callable
+
+from client.response import Response
+from time import sleep
+
+
+class SSEClient:
+    def __init__(self, ip: str, port: int, path: str, on_message: Callable[[dict], None]):
+        self.ip = ip
+        self.port = port
+        self.path = path
+        self.on_message = on_message
+        self.initial_response_received = threading.Event()
+
+    def connect_to_server(self, client_id: str):  
+        threading.Thread(target=self._connect_to_server, args=(client_id,)).start()
+
+    def _connect_to_server(self, client_id: str):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((self.ip, self.port))
+            request_line = f"GET {self.path}?clientId={client_id} HTTP/1.1\r\n"
+            headers = {
+                "Host": f"{self.ip}:{self.port}",
+                "Accept": "text/event-stream",
+                "Connection": "keep-alive"
+            }
+            headers_line = "".join(f"{k}: {v}\r\n" for k, v in headers.items())
+            request_message = f"{request_line}{headers_line}\r\n"
+            s.sendall(request_message.encode('utf-8'))
+
+            event_sep = "\n"
+            response = ''
+            reading_headers = True
+            while True:
+                data = s.recv(1024)
+                #print("data", data, len(data))
+                if not data:
+                    break
+                data = data.decode('utf-8')
+                response += data
+
+                if reading_headers:
+                    # Check if we've received all the headers
+                    if '\r\n\r\n' in response:
+                        resp = Response.from_string(response)
+                        if resp.status_code != 200:
+                            raise Exception(f"Failed to connect to server: {resp}")
+                        reading_headers = False
+                        self.initial_response_received.set()
+                        continue
+
+                if not reading_headers and data:
+                    events = data.split(event_sep + event_sep)
+                    for event in events:
+                        if event:
+                            lines = event.split(event_sep)
+                            #print("Lines are", lines)
+                            event_dict = {}
+                            for line in lines:
+                                if line.startswith("event:"):
+                                    event_dict["event"] = line.split(": ", 1)[1]
+                                elif line.startswith("data:"):
+                                    event_dict["data"] = line.split(": ", 1)[1]
+                                elif line.startswith("id:"):
+                                    event_dict["id"] = line.split(": ", 1)[1]
+                            self.on_message(event_dict)# File: student.py
+
+
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class Student:
+    email: str
+    preferences: tuple# File: thread_pool.py
+
+import threading
+
+
+class Future:
+    def __init__(self):
+        self._result = None
+        self._done = False
+        self._condition = threading.Condition()
+
+    # to be called by thread to set the result and notify that result is ready
+    # (result method will wait for this notification)
+    def set_result(self, result):
+        with self._condition:
+            self._result = result
+            self._done = True
+            self._condition.notify_all()
+
+    def result(self):
+        with self._condition:
+            # while not done wait for set_result to be called by thread to indicate that result is ready
+            while not self._done:
+                self._condition.wait()
+            return self._result
+
+class ThreadPool:
+    def __init__(self):
+        self._workers = []
+
+    def submit(self, fn, *args, **kwargs):
+        future = Future()
+
+        def wrapper():
+            try:
+                result = fn(*args, **kwargs)
+                future.set_result(result)
+            except Exception as e:
+                future.set_result(e)
+
+        thread = threading.Thread(target=wrapper)
+        thread.start()
+
+        self._workers.append(thread)
+        return future
+
+    def shutdown(self, wait=True):
+        if wait:
+            for worker in self._workers:
+                worker.join()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.shutdown()
+# File: __init__.py
+
+
