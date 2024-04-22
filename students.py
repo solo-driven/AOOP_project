@@ -8,19 +8,19 @@ from client import get_assignment, get_destinations, send_preferences, update_pr
 from client import SSEClient, SERVER_PORT
 
 
-
 class CitySelectionForm:
-    def __init__(self, master, up = False,email=""):
+    def __init__(self, master, up = False,email="",prio_text=""):
         self.master = master
         master.title("City Selection Form")
         self.master.resizable(False, False)
 
-        self.cities = [(city.title(), False) for city in get_destinations().body]
+        self.cities = [(city.title(), False , 0) for city in get_destinations().body]
         self.selected_cities = []
         self.email = email
         self.up = up
         self.label = None  # Initialize label as None
-
+        self.priority = None
+        self.priority_text = prio_text
         self.create_widgets()
 
     def create_widgets(self):
@@ -34,7 +34,7 @@ class CitySelectionForm:
         self.city_buttons = []
         row = 0
         col = 0
-        for city, selected in self.cities:
+        for city, selected, priority in self.cities:
             var = tk.IntVar(value=selected)
             self.city_vars.append(var)
             button = tk.Checkbutton(city_frame, text=city, variable=var,
@@ -45,9 +45,12 @@ class CitySelectionForm:
             if col > 2:
                 row += 1
                 col = 0
+        print("self.priority_text")
 
-        print(self.up)
-
+        print(self.priority_text)
+        self.priority = tk.Label(self.master, text=self.priority_text, font=("Helvetica", 30))  # Initialize priority label
+        if(self.up):
+            self.priority.grid(row=2, column=0, padx=20, pady=20, sticky=tk.W)
         email_frame = tk.LabelFrame(
         self.master, text="Enter your email", font=("Helvetica", 30))
         email_frame.grid(row=1, column=0, padx=20, pady=20, sticky=tk.W)
@@ -63,6 +66,21 @@ class CitySelectionForm:
 
     def update_button_states(self):
         selected_count = sum(var.get() for var in self.city_vars)
+        temp_citiess = [(city, var.get()) for city, var in zip(
+            self.cities, self.city_vars)]
+        test = [city[0] for city, selected in temp_citiess if selected]
+
+        for i, (city, selected, priority) in enumerate(self.cities):            
+            if(city == test[0]):
+                self.cities[i] = (city,selected,selected_count) 
+        
+        self.priority.config(text="Priority: "+"\n"+'\n'.join([f"{index + 1}: {city}" for index, city in enumerate(test[::-1])]))
+        self.priority_text = '\n'.join([f"{index + 1}: {city}" for index, city in enumerate(test[::-1])])
+
+
+        self.priority.grid(row=2, column=0, padx=20, pady=20, sticky=tk.W)
+
+
         for i, var in enumerate(self.city_vars):
             button = self.city_buttons[i]
             if selected_count >= 5 and not var.get():
@@ -160,21 +178,22 @@ class CitySelectionForm:
         return True
 # Add a method to reset the form page with the updated preferences
 
-    def restart_program(self, selected_cities, up, email):
+    def restart_program(self, selected_cities, up, email,prior_text):
         python = sys.executable
-        os.execl(python, python, *sys.argv, "--selected_cities", ",".join(selected_cities), "--up", str(up), "--email", email)
+        os.execl(python, python, *sys.argv, "--selected_cities", ",".join(selected_cities), "--up", str(up), "--email", email,"--prio_text",prior_text)
 
     def reset_form(self):
         if self.assignment_window:
             self.assignment_window.destroy()
 
         # Reinitialize the form with the updated preferences
-        self.restart_program(self.selected_cities, True, self.email)
+        self.restart_program(self.selected_cities, True, self.email,self.priority_text)
 
 if __name__ == "__main__":
     selected_cities = []
     up = False
     email = ""
+    prio_text = ""
 
     # Parse command-line arguments
     args = sys.argv[1:]
@@ -186,13 +205,15 @@ if __name__ == "__main__":
             up = bool(args[1])
         elif args[0] == "--email":
             email = args[1]
+        elif args[0] == "--prio_text":
+            prio_text = args[1]
         args = args[2:]
 
     root = tk.Tk()
-    app = CitySelectionForm(root,up=up,email=email)
-    for city, selected in app.cities:
+    app = CitySelectionForm(root,up=up,email=email,prio_text= prio_text)
+    for city, selected,priority in app.cities:
         if city in selected_cities:
-            index = app.cities.index((city, selected))
+            index = app.cities.index((city, selected,priority))
             app.city_vars[index].set(1)
     app.selected_cities = selected_cities
 
