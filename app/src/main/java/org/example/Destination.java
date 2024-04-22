@@ -2,6 +2,7 @@ package org.example;
 
 import java.io.Serializable;
 
+
 public class Destination implements Serializable {
     private String name;
     private int maxStudents;
@@ -22,5 +23,24 @@ public class Destination implements Serializable {
     @Override
     public String toString() {
         return this.getName() + " " + this.getMaxStudents();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+
+        Destination destination = (Destination) obj;
+        return this.getName().equals(destination.getName()) && this.getMaxStudents() == destination.getMaxStudents();
+    }
+
+    @Override
+    public int hashCode() {
+        return this.getName().hashCode() + this.getMaxStudents();
     }
 }

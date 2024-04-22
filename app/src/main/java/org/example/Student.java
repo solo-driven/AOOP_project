@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.util.*;
 import java.util.regex.Pattern;
 
-public class Student implements Serializable {
+public class Student implements Serializable{
     public String email;
     public Map<Integer, Destination> preferences;
 
@@ -53,4 +53,20 @@ public class Student implements Serializable {
     public String toString() {
         return this.email + ": " + this.preferences;
     }
+
+    @Override
+    public int hashCode() {
+        return email != null ? email.hashCode() : 0;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null || getClass() != obj.getClass())
+            return false;
+        Student student = (Student) obj;
+        return email != null ? email.equals(student.email) : student.email == null;
+    }
+
 }

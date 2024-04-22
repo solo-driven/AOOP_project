@@ -8,7 +8,6 @@ import java.util.stream.Collectors;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 
-
 public class AssignmentServer extends Server {
     private String destinations_path = "/destinations.csv";
     private Set<Destination> destinations;
@@ -21,6 +20,7 @@ public class AssignmentServer extends Server {
 
         initDestinations();
 
+        // Register request handlers for different routes
         registerRequestHandler(new Route("GET", "/destinations"), this::handleGetDestinations);
         registerRequestHandler(new Route("POST", "/assign"), this::handleAssignment);
         registerRequestHandler(new Route("POST", "/preferences"), this::handlePostPreferences);
@@ -29,17 +29,14 @@ public class AssignmentServer extends Server {
         registerRequestHandler(new Route("GET", "/assignment-stream"), this::handleAssignmentStream);
         registerRequestHandler(new Route("GET", "/assignments"), this::handleGetAssignments);
 
+        // Add exception handlers
+        addExceptionHandler(InvalidEmailException.class,
+                (exception) -> new RESTResponse(400, "Bad Request", new Message(exception.getMessage())));
 
-        addExceptionHandler(InvalidEmailException.class, (exception) -> 
-            new RESTResponse(400, "Bad Request", new Message(exception.getMessage()))
-        );
-
-        addExceptionHandler(JsonSyntaxException.class, (exc)->
-            new RESTResponse(400, "Bad Request", new Message("Invalid JSON format in request body"))
-        );
+        addExceptionHandler(JsonSyntaxException.class,
+                (exc) -> new RESTResponse(400, "Bad Request", new Message(exc.getMessage())));
 
     }
-
 
     void initDestinations() {
         // Get destinations from file
@@ -57,23 +54,22 @@ public class AssignmentServer extends Server {
         }
     }
 
-
-
-
+    // Method to get the solution for the assignment problem
     private Map<Student, String> getSolution() {
         // Initialize Population
         int populationSize = 50;
-        double mutationProb = 0.10; // Choose any mutation rate
-        double crossoverProb = 0.90; // Choose any crossover rate
+        double mutationProb = 0.10;
+        double crossoverProb = 0.90;
         int maxGenerations = 1000;
         int maxNoImprovementCount = 75;
-        Population population = new Population(new ArrayList<>(destinations), new ArrayList<>(students), populationSize, maxGenerations, maxNoImprovementCount, mutationProb, crossoverProb);
+        Population population = new Population(new ArrayList<>(destinations), new ArrayList<>(students), populationSize,
+                maxGenerations, maxNoImprovementCount, mutationProb, crossoverProb);
         population.initialize();
         Gene solution = population.evolve();
         return solution.getAssignment();
     }
 
-
+    // Request handler for GET /assignments
     private Response handleGetAssignments(Request req) {
         Gson gson = new Gson();
         String body = gson.toJson(assignments);
@@ -81,6 +77,7 @@ public class AssignmentServer extends Server {
         return new RESTResponse(200, "OK", body);
     }
 
+    // Request handler for GET /assignment-stream
     private Response handleAssignmentStream(Request req) {
         String client_email = req.queryParams.get("clientId");
         if (client_email == null) {
@@ -107,7 +104,6 @@ public class AssignmentServer extends Server {
             return validationResponse;
         }
 
-
         try {
             PrintWriter out = new PrintWriter(req.clientSocket.getOutputStream(), true);
             studentConnections.put(student, out);
@@ -115,7 +111,6 @@ public class AssignmentServer extends Server {
             e.printStackTrace();
             return new RESTResponse(500, "Internal Server Error", new Message("Failed to get output stream"));
         }
-    
 
         // Create a response with the appropriate headers for server-sent events
         SSEResponse response = new SSEResponse(200, "OK");
@@ -123,12 +118,12 @@ public class AssignmentServer extends Server {
         return response;
     }
 
+    // Request handler for POST /assign
     private Response handleAssignment(Request req) {
         Gson gson = new Gson();
         Student student;
-       
-        student = getStudentFromBody(req.body);
 
+        student = getStudentFromBody(req.body);
 
         // Validate student
         Response validationResponse = validateStudent(student);
@@ -136,7 +131,7 @@ public class AssignmentServer extends Server {
             return validationResponse;
         }
 
-        // if student is not in the list
+        // if student not present return 404
         if (!students.contains(student)) {
             return new RESTResponse(404, "Not Found", new Message("Student with email " + student.email
                     + " not found. Please add student to list of preferences first."));
@@ -157,8 +152,6 @@ public class AssignmentServer extends Server {
                     // Notify student of assignment change
                     PrintWriter out = studentConnections.get(currentStudent);
                     if (out != null) {
-                        //System.out.println("handleAssignment out is not null");
-   
                         SSEEvent assignment = new SSEEvent("assignment", newAssignment);
                         out.write(assignment.toString());
                         out.flush();
@@ -181,6 +174,7 @@ public class AssignmentServer extends Server {
         return new RESTResponse(200, "OK", json);
     }
 
+    // Request handler for GET /students
     private Response handleGetStudents(Request req) {
         Gson gson = new Gson();
         String body = gson.toJson(students);
@@ -188,6 +182,7 @@ public class AssignmentServer extends Server {
         return new RESTResponse(200, "OK", body);
     }
 
+    // Request handler for GET /destinations
     private Response handleGetDestinations(Request req) {
         List<String> cities = this.destinations.stream().map(Destination::getName).collect(Collectors.toList());
 
@@ -197,45 +192,44 @@ public class AssignmentServer extends Server {
         return new RESTResponse(200, "OK", body);
     }
 
+    // Method to get a Student object from a JSON string
     private Student getStudentFromBody(String body) {
         Gson gson = new Gson();
         JsonStudent jsonStudent = gson.fromJson(body, JsonStudent.class);
-    
+
         // Convert List<String> to Map<Integer, Destination>
         Map<Integer, Destination> preferences = new HashMap<>();
         for (int i = 0; i < jsonStudent.preferences.size(); i++) {
             String cityName = jsonStudent.preferences.get(i);
             Destination destination = destinations.stream()
-                .filter(d -> d.getName().equals(cityName))
-                .findFirst()
-                .orElse(null);
+                    .filter(d -> d.getName().equals(cityName))
+                    .findFirst()
+                    .orElse(null);
             if (destination != null) {
                 preferences.put(i, destination);
             } else {
                 throw new JsonSyntaxException("Invalid destination: " + cityName);
             }
         }
-    
+
         return new Student(jsonStudent.email, preferences);
     }
 
-
+    // Request handler for POST /preferences
     private Response handlePostPreferences(Request req) {
         Student student;
 
         student = getStudentFromBody(req.body);
 
-        
         // Validate student
-        Response validationResponse = validateStudent(student); 
+        Response validationResponse = validateStudent(student);
         if (validationResponse != null) {
             return validationResponse;
         }
 
-        System.out.println("Students: " + students);
         if (students.contains(student)) {
             return new RESTResponse(400, "Bad Request",
-                new Message("Student with email " + student.email + " already exists"));
+                    new Message("Student with email " + student.email + " already exists"));
         }
 
         students.add(student);
@@ -243,6 +237,7 @@ public class AssignmentServer extends Server {
         return new RESTResponse(201, "Created", new Message("Student with email " + student.email + " created"));
     }
 
+    // returns null if no validation errors otherwise a validation response
     private Response validateStudent(Student student) {
         if (student == null) {
             return new RESTResponse(400, "Bad Request", new Message("Missing body"));
@@ -260,24 +255,28 @@ public class AssignmentServer extends Server {
         if (uniquePreferences.size() != student.getPreferences().size()) {
             return new RESTResponse(400, "Bad Request", new Message("Repeated preferences"));
         }
-        
-        // preferences must be between 0 and 5
-        if (student.preferences.size() > 5 || student.preferences.size() < 1){
-            return new RESTResponse(400, "Bad Request", new Message("Too many preferences, maximum is 5"));
+
+        // preferences must be between 1 and 5
+        if (student.preferences.size() > 5 || student.preferences.size() < 1) {
+            return new RESTResponse(400, "Bad Request",
+                    new Message("Invalid number of preferences: " + student.preferences.size()
+                            + " preferences provided, must be between 1 and 5."));
         }
 
         // validate destination
         for (Destination destination : student.getPreferences().values()) {
             if (!destinations.contains(destination)) {
-                return new RESTResponse(400, "Bad Request", new Message("Invalid destination: '" + destination.getName() + "'"));
+                return new RESTResponse(400, "Bad Request",
+                        new Message("Invalid destination: '" + destination.getName() + "'"));
             }
         }
 
         return null;
     }
 
+    // Request handler for PUT /preferences
     private Response handlePutPreferences(Request req) {
-       
+
         Student updatedStudent = getStudentFromBody(req.body);
 
         Response validationResponse = validateStudent(updatedStudent);

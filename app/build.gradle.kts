@@ -38,8 +38,12 @@ tasks.register<Jar>("fatJar") {
     from({
         configurations.runtimeClasspath.get().filter { it.name.endsWith("jar") }.map { zipTree(it) }
     })
-    archiveBaseName.set("${project.name}-fat")
+    archiveBaseName.set("app")
+    archiveClassifier.set("")
     with(tasks.named("jar").get() as CopySpec)
+
+    // Set the destination directory to the parent of the project root
+    destinationDirectory.set(file("$projectDir").parentFile)
 }
 
 
