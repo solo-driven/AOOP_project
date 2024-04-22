@@ -70,9 +70,9 @@ class CitySelectionForm:
             self.cities, self.city_vars)]
         test = [city[0] for city, selected in temp_citiess if selected]
 
-        for i, (city, selected, priority) in enumerate(self.cities):            
-            if(city == test[0]):
-                self.cities[i] = (city,selected,selected_count) 
+        # for i, (city, selected, priority) in enumerate(self.cities):            
+        #     if(city == test[0]):
+        #         self.cities[i] = (city,selected,selected_count) 
         
         self.priority.config(text="Priority: "+"\n"+'\n'.join([f"{index + 1}: {city}" for index, city in enumerate(test[::-1])]))
         self.priority_text = '\n'.join([f"{index + 1}: {city}" for index, city in enumerate(test[::-1])])
