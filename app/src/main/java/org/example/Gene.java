@@ -56,7 +56,6 @@ public class Gene {
             if (currentStudents < maxStudents) {
                 return destinationIndex;
             }
-            // System.out.println("Stuck in chooseDestinationFromPreference");
         } while (visitedDestinations.size() < preferences.size()); // Continue until all preferences are visited
 
         // If all preferences are visited and none of them are available, assign to a random available destination
@@ -170,7 +169,6 @@ public class Gene {
             int currentStudents = entry.getValue();
             int maxStudents = destination.getMaxStudents();
             while (currentStudents > maxStudents) {
-                // System.out.println("Stuck in removeExceedingDestinationCapacity");
                 Random random = new Random();
                 List<Student> assignedStudents = findAssignedStudents(currentDestinationIndex);
                 Student randomAssignedStudent = assignedStudents.get(random.nextInt(assignedStudents.size()));
@@ -198,12 +196,10 @@ public class Gene {
                 // Get the corresponding student and destination
                 Student student = this.students.get(index);
                 Destination destination = this.destinations.get(destinationIndex);
-//                System.out.println(student + "assigned to: " + destination);
                 // Get the student's preferences
                 Map<Integer, Destination> preferences = student.getPreferences();
 
                 // Calculate the cost based on the preferences
-//                System.out.println(preferences + " contains " + destination + ": " + preferences.containsValue(destination));
                 if (preferences.containsValue(destination)) {
                     // Cost for the i-th choice
                     int choice = student.getRankFromDestination(destination); // preference index
@@ -232,26 +228,12 @@ public class Gene {
         Gene child = new Gene(this.students, this.destinations);
         Random random = new Random();
         int crossoverPoint = random.nextInt(this.students.size());
-//        System.out.println("Crossover point: " + crossoverPoint);
         for (int i = 0; i < this.length; i++) {
             int studentIndex = i % this.students.size();
-//            System.out.println("Student index: " + studentIndex);
-            if (studentIndex > crossoverPoint) {
-//                System.out.println("Greater");
+            if (studentIndex > crossoverPoint)
                 child.getGene()[i] = this.gene[i];
-//                System.out.println("Parent 1:");
-//                System.out.println(Arrays.toString(this.gene));
-//                System.out.println("Child:");
-//                System.out.println(Arrays.toString(child.getGene()));
-            }
-            else {
-//                System.out.println("Smaller");
+            else
                 child.getGene()[i] = partner.getGene()[i];
-//                System.out.println("Parent 2:");
-//                System.out.println(Arrays.toString(partner.getGene()));
-//                System.out.println("Child:");
-//                System.out.println(Arrays.toString(child.getGene()));
-            }
         }
         child.removeExceedingDestinationCapacity();
         return child;
@@ -261,10 +243,8 @@ public class Gene {
         Pair twoStudentIndices = getUniqueStudentIndices();
         int firstStudentIndex = twoStudentIndices.getFirst();
         int secondStudentIndex = twoStudentIndices.getSecond();
-        while (firstStudentIndex == secondStudentIndex) {
-            // System.out.println("Stuck in swapMutate");
+        while (firstStudentIndex == secondStudentIndex)
             secondStudentIndex = getUniqueStudentIndices().getSecond();
-        }
         if (secondStudentIndex != -1)
             swapStudents(firstStudentIndex, secondStudentIndex);
     }
@@ -300,20 +280,6 @@ public class Gene {
         this.gene[newIndexB] = 1;
     }
 
-    private int getAssignedIndex(int studentIndex) {
-        int destinationIndex = findAssignedDestination(studentIndex);
-        return calculateIndex(studentIndex, destinationIndex);
-    }
-
-    private int getSwapIndex(int studentIndex, int swapStudentIndex) {
-//        System.out.println(student + " index: " + studentIndex);
-//        System.out.println("Swap: " + swapStudent + " index: " + this.students.indexOf(swapStudent));
-        int swapDestinationIndex = findAssignedDestination(swapStudentIndex);
-//        System.out.println("Swap: " + this.destinations.get(swapDestinationIndex) + " index: " + swapDestinationIndex);
-//        System.out.println("Calculated swap index: " + calculateIndex(studentIndex, swapDestinationIndex));
-        return calculateIndex(studentIndex, swapDestinationIndex);
-    }
-
     private int calculateIndex(int studentIndex, int destinationIndex) {
         return studentIndex + destinationIndex * this.students.size();
     }
@@ -322,13 +288,8 @@ public class Gene {
         Random random = new Random();
         int indexA = random.nextInt(this.students.size());
         int indexB = (this.students.size() == 1) ? -1 : random.nextInt(this.students.size());
-        // System.out.println("Students size: " + students.size());
-        while (indexA == indexB) {
-            // System.out.println("Stuck in getUniqueStudentIndices");
-            // System.out.println("index A: " + indexA + " index B: " + indexB);
+        while (indexA == indexB)
             indexB = random.nextInt(this.students.size());
-        }
-        // System.out.println("index B:" + indexB);
         return new Pair(indexA, indexB);
     }
 }
