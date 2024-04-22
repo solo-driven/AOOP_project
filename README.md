@@ -72,3 +72,9 @@ Server-Sent Events (SSE) is a standard that allows a web server to push updates 
 
 - **Gson**: Utilized for converting Java objects to JSON and vice versa.
 
+
+
+# Run App
+```pip3 install tkinter```
+
+```python3 app.py```
