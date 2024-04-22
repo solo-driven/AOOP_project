@@ -5,6 +5,8 @@
 - Murad Ganbarli: Client-side coding
 - Saleh Alizada: GUI design
 
+# Design: UML Class Diagram
+
 ```mermaid
 classDiagram
 
@@ -53,8 +55,6 @@ classDiagram
         boolean isValidEmail()
         int getRankFromDestination(Destination destination)
     }
-
-
 
     class Server {
         -int port
