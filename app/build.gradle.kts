@@ -38,7 +38,7 @@ tasks.register<Jar>("fatJar") {
     from({
         configurations.runtimeClasspath.get().filter { it.name.endsWith("jar") }.map { zipTree(it) }
     })
-    archiveBaseName.set("app")
+    archiveBaseName.set("server")
     archiveClassifier.set("")
     with(tasks.named("jar").get() as CopySpec)
 

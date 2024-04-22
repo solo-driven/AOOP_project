@@ -23,7 +23,7 @@ The server also supports Server-Sent Events (SSE) for real-time updates. Clients
 2. Run the following command to start the server:
 
     ```bash
-    java -jar app.jar
+    java -jar server.jar
     ```
 
 ### Using Gradle Wrapper

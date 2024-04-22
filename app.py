@@ -88,7 +88,6 @@ class CitySelectionForm:
 
         # Update self.selected_cities with the selected cities
         self.selected_cities = [city[0] for city, selected in temp_cities if selected]
-        print(self.selected_cities)
         if(self.email == ""):
             self.email = self.email_entry.get()
             
@@ -103,24 +102,17 @@ class CitySelectionForm:
             messagebox.showerror("Error", "Please enter a valid email address")
             self.email = ""
             return
-        print(self.selected_cities)
-        print(self.email)
         messagebox.showinfo("Selected Cities", f"Selected Cities: {', '.join(self.selected_cities)}\nEmail: {self.email}")
-        print(self.up)
         if(self.up):
             update_preferences(email=self.email, preferences=self.selected_cities)
         else:
-            print(self.email)
-            print(self.selected_cities)
             send_preferences(email=self.email, preferences=self.selected_cities)
-            print("send")
         self.show_assignment()
 
 
     def get_assignment_and_show(self):
         assignment = get_assignment(
             email=self.email, preferences=self.selected_cities)
-        print(assignment)
 
         self.label.config(
             text=f"Dear {self.email}, your assignment is: {assignment.body['assignment']}. Congratulations!")
@@ -132,7 +124,6 @@ class CitySelectionForm:
                         "/assignment-stream", self.on_message_callback)
         client.connect_to_server(self.email)
         client.initial_response_received.wait()
-        print(self.selected_cities)
         self.assignment_window = tk.Tk()
         self.assignment_window.title("Assignment Result")
         self.assignment_window.geometry("1000x800")  # Set a larger window size
@@ -154,10 +145,8 @@ class CitySelectionForm:
         
 
     def on_message_callback(self, data):
-        print("Received data:", data)
         messagebox.showinfo(
             "UPDATE!!!", f"Your city was updated here is the data:{data['data']}")
-        print(data)
         self.label.config(
             text=f"Dear {self.email}, your assignment is: {data['data']}. Congratulations!")
 
@@ -192,7 +181,6 @@ if __name__ == "__main__":
         if args[0] == "--selected_cities":
             selected_cities = args[1].split(",")
         elif args[0] == "--up":
-            print(args[1])
             up = bool(args[1])
         elif args[0] == "--email":
             email = args[1]
