@@ -1,3 +1,154 @@
+# Authors
+
+- Yusif Askari: Server code implementation
+- Ismayil Abdullazada: Genetic algorithm development
+- Murad Ganbarli: Client-side coding
+- Saleh Alizada: GUI design
+
+```mermaid
+classDiagram
+
+    class Route {
+        String method
+        String path
+    }
+    class Request {
+        Socket clientSocket
+        Map<String, String> headers
+        Map<String, String> queryParams
+        String body
+        String method
+        String path
+    }
+    class Response {
+        int statusCode
+        String statusMessage
+        Map<String, String> headers
+        String body
+        String separator
+    }
+    class Destination {
+        String name
+        int maxStudents
+    }
+    class HttpParser {
+        String method
+        String URI
+        String version
+        Map<String, String> headers
+        String body
+        + void parseRequest(InputStream inputStream)
+    }
+
+    class RequestHandler {
+        Response handle(Request requestBody)
+    }
+    class ExceptionHandler {
+        Response handle(Exception e)
+    }
+
+    class Student {
+        String name
+        int age
+        boolean isValidEmail()
+        int getRankFromDestination(Destination destination)
+    }
+
+
+
+    class Server {
+        -int port
+        -ServerSocket serverSocket
+        -boolean running
+        -ExecutorService pool
+        -Map<Route, RequestHandler> handlers
+        -Map<Class<? extends Exception>, ExceptionHandler> exceptionHandlers
+        +Server(int port)
+        +void addExceptionHandler(Class<? extends Exception> exceptionClass, ExceptionHandler handler)
+        -Response handleRequest(Request req)
+        -void registerRequestHandler(Route route, RequestHandler handler)
+        +void start()
+        -void handleClient(Socket clientSocket)
+        +void stop()
+    }
+
+     class AssignmentServer {
+        -String destinations_path
+        -Set<Destination> destinations
+        -Set<Student> students
+        -Map<Student, String> assignments
+        -Map<Student, PrintWriter> studentConnections
+        +AssignmentServer(int port)
+        -void initDestinations()
+        -Map<Student, String> getSolution()
+        -Response handleGetAssignments(Request req)
+        -Response handleAssignmentStream(Request req)
+        -Response handleAssignment(Request req)
+        -Response handleGetStudents(Request req)
+        -Response handleGetDestinations(Request req)
+        -Student getStudentFromBody(String body)
+        -Response handlePostPreferences(Request req)
+        -Response validateStudent(Student student)
+        -Response handlePutPreferences(Request req)
+    }
+
+    class Gene {
+        - int[] gene
+        - List<Student> students
+        - List<Destination> destinations
+        - HelperMethods HelperMethods
+        - int length
+        + Gene( List<Student> students, List<Destination> destinations)
+        + void showAssignment()
+        + Map<Student, String> getAssignment()
+        + int calculateFitness()
+        + void mutate(mutationProb: double)
+        + Gene crossover(partner: Gene)
+        - void swapMutate()
+        - void bitFlipMutate()
+    }
+
+    class Population {
+        -List<Gene> population
+        -List<Destination> destinations
+        -List<Student> students
+        -int size
+        -int maxGenerations
+        -int maxNoImprovementCount
+        -double mutationProb
+        -double crossoverProb
+        +Population(List<Destination> destinations, List<Student> students, int size, int maxGenerations, int maxNoImprovementCount, double mutationProb, double crossoverProb)
+        +List<Gene> getPopulation()
+        +void initialize()
+        -Gene generateSolution()
+        +Map<Gene, Integer> calculateFitness()
+        +Gene select()
+        +Gene evolve()
+        -void mutate(Gene gene)
+    }
+
+    Server "1" -- "*" Route : uses
+    Server "1" -- "*" RequestHandler : uses
+    Server "1" -- "*" ExceptionHandler : uses
+
+    RequestHandler -- Request : handles
+    HttpParser -- Request : parses
+    ExceptionHandler -- Exception : handles
+    RequestHandler -- Response : returns
+    ExceptionHandler -- Response : returns
+    AssignmentServer --|> Server
+    Gene "*" o-- "*" Student : has
+    Gene "*" o-- "*" Destination : has
+    Population "*" o-- "*" Student : has
+    Population "*" o-- "*" Destination : has
+    Population "*" o-- "*" Gene : has
+    Gene -- Pair : uses
+    Gene -- HelperMethods : uses
+    AssignmentServer "1" -- "*" Population : uses
+    AssignmentServer -- "*" Student : interacts
+    AssignmentServer -- "*" Destination : has
+```
+
 # Assignment Server
 
 The **Assignment Server** is a robust server application designed to manage student assignments. It provides a variety of endpoints to handle tasks such as retrieving a list of destinations, fetching assignments, managing student preferences, and subscribing to real-time updates.
@@ -10,11 +161,10 @@ The server uses an `HttpParser` to parse incoming HTTP requests and a map of rou
 
 The server also supports Server-Sent Events (SSE) for real-time updates. Clients can subscribe to the `/assignment-stream` endpoint to receive updates whenever there is a change in the assignments.
 
-
-
 ## Running the Server
 
-### Using the Pre-Built JAR 
+### Using the Pre-Built JAR
+
 #### Prerequisites
 
 - Java 21 or higher
@@ -22,9 +172,9 @@ The server also supports Server-Sent Events (SSE) for real-time updates. Clients
 1. Open a terminal in the project root directory.
 2. Run the following command to start the server:
 
-    ```bash
-    java -jar server.jar
-    ```
+   ```bash
+   java -jar server.jar
+   ```
 
 ### Using Gradle Wrapper
 
@@ -33,11 +183,11 @@ The Gradle Wrapper is included in the project and can be used to build and run t
 1. Open a terminal in the project root directory.
 2. Run the following command to start the server:
 
-    ```bash
-    ./gradlew run
-    ```
+   ```bash
+   ./gradlew run
+   ```
 
-    If you're on Windows, use `gradlew.bat run` instead of `./gradlew run`.
+   If you're on Windows, use `gradlew.bat run` instead of `./gradlew run`.
 
 ### Using Docker
 
@@ -47,6 +197,7 @@ You can also run the server using Docker. The Docker image for the server is ava
 docker pull solodriven/final_project_server
 docker run -p 8080:8080 solodriven/final_project_server
 ```
+
 ## Endpoints
 
 - **`GET /destinations`**: This endpoint retrieves a list of all available destinations. It doesn't require any input and returns a JSON array of cities.
@@ -67,14 +218,12 @@ docker run -p 8080:8080 solodriven/final_project_server
 
 Server-Sent Events (SSE) is a standard that allows a web server to push updates to the client. Unlike WebSockets, SSE is a one-way communication channel from the server to the client. In this application, SSE is used to push assignment updates to the clients in real-time.
 
-
 ## Dependencies
 
 - **Gson**: Utilized for converting Java objects to JSON and vice versa.
 
-
-
 # Run App
-```pip3 install tkinter```
 
-```python3 app.py```
+`pip3 install tkinter`
+
+`python3 app.py`
